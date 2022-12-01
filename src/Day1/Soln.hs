@@ -3,6 +3,7 @@ module Day1.Soln where
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 
+import Data.List
 import Data.Maybe
 
 shortFile :: FilePath
@@ -18,11 +19,17 @@ solnForFile :: FilePath -> IO ()
 solnForFile file = do
   content <- TIO.readFile file
   let cal_lines = T.lines content
-      max_cal = findMaxElfCal cal_lines
-  putStrLn $ "Max: " ++ show max_cal
+      max_cal = findMaxElfCals cal_lines
+  putStrLn $ "Max 3:   " ++ show max_cal
+  putStrLn $ "Max Sum: " ++ show (sum max_cal)
 
-findMaxElfCal :: [T.Text] -> Int
-findMaxElfCal = maximum . readElfCalStrs . map parseCal
+findMaxElfCals :: [T.Text] -> [Int]
+findMaxElfCals = maximum3 . readElfCalStrs . map parseCal
+
+maximum3 :: [Int] -> [Int]
+maximum3 xs = 
+  let sorted = sort xs
+   in take 3 (reverse sorted)
 
 readElfCalStrs :: [Maybe Int] -> [Int] 
 readElfCalStrs cals = 
