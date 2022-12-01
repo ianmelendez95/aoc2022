@@ -8,9 +8,15 @@ import Data.Maybe
 shortFile :: FilePath
 shortFile = "src/Day1/short-input.txt"
 
+fullFile :: FilePath
+fullFile = "src/Day1/full-input.txt"
+
 soln :: IO ()
-soln = do 
-  content <- TIO.readFile shortFile
+soln = solnForFile fullFile
+
+solnForFile :: FilePath -> IO ()
+solnForFile file = do
+  content <- TIO.readFile file
   let cal_lines = T.lines content
       max_cal = findMaxElfCal cal_lines
   putStrLn $ "Max: " ++ show max_cal
