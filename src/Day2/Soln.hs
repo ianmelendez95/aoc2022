@@ -19,7 +19,7 @@ fullFile :: FilePath
 fullFile = "src/Day2/full-input.txt"
 
 soln :: IO ()
-soln = solnForFile shortFile
+soln = solnForFile fullFile
 
 solnForFile :: FilePath -> IO ()
 solnForFile file = do
