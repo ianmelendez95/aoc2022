@@ -9,6 +9,8 @@ import qualified Data.Text.IO as TIO
 import Data.List
 import Data.Maybe
 
+import Debug.Trace
+
 data Shape   = Rock | Paper | Scissors deriving (Show, Eq)
 data Outcome = Win  | Lose  | Draw     deriving Show
 
@@ -25,7 +27,9 @@ solnForFile :: FilePath -> IO ()
 solnForFile file = do
   content <- TIO.readFile file
   let round_lines = T.lines content
+      rounds = map parseRoundLine round_lines
       points = sum $ map (resultPoints . roundResult . parseRoundLine) round_lines
+  print (length rounds)
   putStrLn $ "Points:  " ++ show points
 
 resultPoints :: (Outcome, Shape) -> Int
@@ -42,10 +46,10 @@ resultPoints (outcome, shape) = outcomePoints outcome + shapePoints shape
     shapePoints Scissors = 3
 
 roundResult :: (Shape, Shape) -> (Outcome, Shape)
-roundResult round@(my_shape, _) = (roundOutcome round, my_shape)
+roundResult (their_shape, my_shape) = (round_outcome, my_shape)
   where
-    roundOutcome :: (Shape, Shape) -> Outcome
-    roundOutcome (their_shape, my_shape) =
+    round_outcome :: Outcome
+    round_outcome =
       if their_shape == my_shape
         then Draw
         else case their_shape of 
