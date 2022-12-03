@@ -29,8 +29,25 @@ solnForFile file = do
   let sack_lines = T.lines content
       sack_compartments = map compartments sack_lines
       shared_items = map compartmentsSharedItem sack_compartments
-      result = sum (map (itemPriority . compartmentsSharedItem . compartments) sack_lines)
+
+      sack_groups = splitGroups sack_lines
+      badges = map groupBadge sack_groups
+
+      result = sum (map itemPriority badges)
+  putStrLn $ "Groups: " <> show sack_groups
+  putStrLn $ "Badges: " <> show badges
   putStrLn $ "Answer: " <> show result
+
+groupBadge :: [T.Text] -> Char
+groupBadge sacks = 
+  let sack_items = map (Set.fromList . T.unpack) sacks
+   in head . Set.toList $ foldl1' Set.intersection sack_items
+
+splitGroups :: [T.Text] -> [[T.Text]]
+splitGroups [] = []
+splitGroups sacks = 
+  let (group, rest) = splitAt 3 sacks
+   in group : splitGroups rest
   
 compartmentsSharedItem :: (Set Char, Set Char) -> Char
 compartmentsSharedItem (left, right) = head . Set.toList $ Set.intersection left right
