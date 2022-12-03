@@ -37,6 +37,7 @@ library:
   source-dirs: src
   dependencies:
   - text
+  - containers
 
 executables:
   aoc2022-exe:
