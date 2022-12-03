@@ -27,6 +27,7 @@ library
   exposed-modules:
       Day1.Soln
       Day2.Soln
+      Day3.Soln
       Lib
   other-modules:
       Paths_aoc2022
