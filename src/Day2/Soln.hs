@@ -12,7 +12,7 @@ import Data.Maybe
 import Debug.Trace
 
 data Shape   = Rock | Paper | Scissors deriving (Show, Eq)
-data Outcome = Win  | Lose  | Draw     deriving Show
+data Outcome = Win  | Lose  | Draw     deriving (Show, Eq)
 
 shortFile :: FilePath
 shortFile = "src/Day2/short-input.txt"
@@ -45,22 +45,31 @@ resultPoints (outcome, shape) = outcomePoints outcome + shapePoints shape
     shapePoints Paper    = 2
     shapePoints Scissors = 3
 
-roundResult :: (Shape, Shape) -> (Outcome, Shape)
-roundResult (their_shape, my_shape) = (round_outcome, my_shape)
+roundResult :: (Shape, Outcome) -> (Outcome, Shape)
+roundResult (their_shape, outcome) = (outcome, my_shape)
   where
-    round_outcome :: Outcome
-    round_outcome =
-      if their_shape == my_shape
-        then Draw
+    my_shape :: Shape
+    my_shape =
+      if outcome == Draw
+        then their_shape
         else case their_shape of 
-              Rock     -> if my_shape == Paper    then Win else Lose
-              Paper    -> if my_shape == Scissors then Win else Lose
-              Scissors -> if my_shape == Rock     then Win else Lose
+              Rock     -> if outcome == Win then Paper    else Scissors
+              Paper    -> if outcome == Win then Scissors else Rock
+              Scissors -> if outcome == Win then Rock     else Paper
 
-parseRoundLine :: T.Text -> (Shape, Shape)
+    -- round_outcome :: Outcome
+    -- round_outcome =
+    --   if their_shape == my_shape
+    --     then Draw
+    --     else case their_shape of 
+    --           Rock     -> if my_shape == Paper    then Win else Lose
+    --           Paper    -> if my_shape == Scissors then Win else Lose
+    --           Scissors -> if my_shape == Rock     then Win else Lose
+
+parseRoundLine :: T.Text -> (Shape, Outcome)
 parseRoundLine line = 
   let [their_txt, my_txt] = T.words line
-   in (parseTheirShape their_txt, parseMyShape my_txt)
+   in (parseTheirShape their_txt, parseOutcome my_txt)
   where
     parseTheirShape :: T.Text -> Shape
     parseTheirShape txt
@@ -69,10 +78,17 @@ parseRoundLine line =
       | "C" == txt = Scissors
       | otherwise = error $ "Unknown shape: " <> T.unpack txt
 
-    parseMyShape :: T.Text -> Shape
-    parseMyShape txt
-      | "X" == txt = Rock
-      | "Y" == txt = Paper
-      | "Z" == txt = Scissors
-      | otherwise = error $ "Unknown shape: " <> T.unpack txt
+    parseOutcome :: T.Text -> Outcome
+    parseOutcome txt
+      | "X" == txt = Lose
+      | "Y" == txt = Draw
+      | "Z" == txt = Win
+      | otherwise = error $ "Unknown outcome: " <> T.unpack txt
+
+    -- parseMyShape :: T.Text -> Shape
+    -- parseMyShape txt
+    --   | "X" == txt = Rock
+    --   | "Y" == txt = Paper
+    --   | "Z" == txt = Scissors
+    --   | otherwise = error $ "Unknown shape: " <> T.unpack txt
 
