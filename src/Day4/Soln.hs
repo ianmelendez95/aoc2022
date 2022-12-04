@@ -42,10 +42,11 @@ showPair (left, right) = showRange left <> "," <> showRange right
     showRange (s,e) = show s <> "-" <> show e
 
 rangePairsContained :: (Range, Range) -> Bool
-rangePairsContained ((start1, end1), (start2, end2)) = 
-  if start1 <= start2
-    then end1 >= end2
-    else end1 <= end2
+rangePairsContained ((start1, end1), (start2, end2))   
+  | start1 == start2 = True  -- start at the same spot, always contained
+  | end1   == end2   = True  -- end at the same spot, also always contained (overcooked, undercooked)
+  | start1 < start2  = end1 > end2
+  | otherwise        = end1 < end2
 
 parseRangePairs :: T.Text -> (Range, Range)
 parseRangePairs line = 
