@@ -40,11 +40,21 @@ data Instr = Instr {
   instrTo    :: Int
 } deriving Show
 
-parseInput :: [T.Text] -> ([[Maybe Char]], [Instr])
+parseInput :: [T.Text] -> ([[Char]], [Instr])
 parseInput input_lines = 
   let (cube_lines, rest) = span (\l -> "[" `T.isInfixOf` l) input_lines
       instr_lines = drop 2 rest
-   in (map parseCubes cube_lines, map parseInstr instr_lines)
+
+      input_cubes = map parseCubes cube_lines
+   in (inputCubesToCols input_cubes, map parseInstr instr_lines)
+
+inputCubesToCols :: [[Maybe Char]] -> [[Char]]
+inputCubesToCols input_cubes = 
+  foldr (zipWith consCube) (replicate (length (head input_cubes)) []) input_cubes
+  where 
+    consCube :: Maybe Char -> [Char] -> [Char]
+    consCube Nothing col = col
+    consCube (Just c) col = c : col
   
 parseInstr :: T.Text -> Instr
 parseInstr line = 
