@@ -38,6 +38,7 @@ library:
   dependencies:
   - text
   - containers
+  - vector
 
 executables:
   aoc2022-exe:

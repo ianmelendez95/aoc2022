@@ -12,6 +12,12 @@ import Data.Char
 import Data.Set (Set)
 import qualified Data.Set as Set
 
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
+
+import Data.Vector (Vector)
+import qualified Data.Vector as Vec
+
 import Debug.Trace
 
 shortFile :: FilePath
@@ -40,13 +46,16 @@ data Instr = Instr {
   instrTo    :: Int
 } deriving Show
 
-parseInput :: [T.Text] -> ([[Char]], [Instr])
+execInstr :: Instr -> Vector [Char] -> Vector [Char]
+execInstr (Instr count from to) = undefined
+
+parseInput :: [T.Text] -> (Vector [Char], [Instr])
 parseInput input_lines = 
   let (cube_lines, rest) = span (\l -> "[" `T.isInfixOf` l) input_lines
       instr_lines = drop 2 rest
 
       input_cubes = map parseCubes cube_lines
-   in (inputCubesToCols input_cubes, map parseInstr instr_lines)
+   in (Vec.fromList $ inputCubesToCols input_cubes, map parseInstr instr_lines)
 
 inputCubesToCols :: [[Maybe Char]] -> [[Char]]
 inputCubesToCols input_cubes = 
