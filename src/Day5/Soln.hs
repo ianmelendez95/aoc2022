@@ -42,8 +42,9 @@ solnForFile file = do
 
   mapM_ (`iterInstr` cols) instrs 
 
+  tops <- getTopCrates cols
 
-
+  putStrLn $ "Answer: " <> show tops
 
 data Instr = Instr {
   instrCount :: Int, 
@@ -51,8 +52,12 @@ data Instr = Instr {
   instrTo    :: Int
 } deriving Show
 
--- getTopCrates :: IOVector [Char] -> IO [Char]
--- getTopCrates = 
+getTopCrates :: IOVector [Char] -> IO [Char]
+getTopCrates = Vec.foldr consHead []
+  where 
+    consHead :: [Char] -> [Char] -> [Char]
+    consHead [] cs = cs
+    consHead (c:_) cs = c : cs
 
 iterInstr :: Instr -> IOVector [Char] -> IO ()
 iterInstr instr cols = do
