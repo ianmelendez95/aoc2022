@@ -29,14 +29,16 @@ solnForFile file = do
   let input_lines = T.lines content
       (cubes, instrs) = parseInput input_lines
   putStrLn "Cubes: "
-  mapM_ print (take 3 cubes)
-  putStrLn $ "Answer: "   <> show input_lines
+  mapM_ print cubes
+
+  putStrLn "\nInstructions"
+  mapM_ print instrs
 
 data Instr = Instr {
   instrCount :: Int, 
   instrFrom  :: Int, 
   instrTo    :: Int
-}
+} deriving Show
 
 parseInput :: [T.Text] -> ([[Maybe Char]], [Instr])
 parseInput input_lines = 
