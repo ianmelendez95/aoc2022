@@ -32,13 +32,22 @@ solnForFile file = do
   mapM_ print (take 3 cubes)
   putStrLn $ "Answer: "   <> show input_lines
 
-data Instr = Instr Int Int Int -- move [cube] from [column] to [column]
+data Instr = Instr {
+  instrCount :: Int, 
+  instrFrom  :: Int, 
+  instrTo    :: Int
+}
 
-parseInput :: [T.Text] -> ([[Maybe Char]], [T.Text])
+parseInput :: [T.Text] -> ([[Maybe Char]], [Instr])
 parseInput input_lines = 
   let (cube_lines, rest) = span (\l -> "[" `T.isInfixOf` l) input_lines
       instr_lines = drop 2 rest
-   in (map parseCubes cube_lines, instr_lines)
+   in (map parseCubes cube_lines, map parseInstr instr_lines)
+  
+parseInstr :: T.Text -> Instr
+parseInstr line = 
+  let [_, count, _, from, _, to] = map (read . T.unpack) $ T.words line
+   in Instr count from to
 
 parseCubes :: T.Text -> [Maybe Char]
 parseCubes input_line = 
