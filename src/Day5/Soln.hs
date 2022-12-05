@@ -40,7 +40,8 @@ solnForFile file = do
 
   cols <- vecFromList cubes
 
-  mapM_ (`iterInstr` cols) instrs 
+  -- mapM_ (`iterInstr` cols) instrs 
+  mapM_ (`execInstr` cols) instrs 
 
   tops <- getTopCrates cols
 
@@ -73,7 +74,7 @@ execInstr (Instr count from to) cols = do
   to_col   <- Vec.read cols to_i
   let (from_cubes, from_rest) = splitAt count from_col
   Vec.write cols from_i from_rest
-  Vec.write cols to_i   (reverse from_cubes <> to_col)
+  Vec.write cols to_i   (from_cubes <> to_col)
   where 
     from_i = from - 1
     to_i = to - 1
