@@ -15,8 +15,8 @@ import qualified Data.Set as Set
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IntMap
 
-import Data.Vector (Vector)
-import qualified Data.Vector as Vec
+import Data.Vector.Mutable (IOVector)
+import qualified Data.Vector.Mutable as Vec
 
 import Debug.Trace
 
@@ -34,8 +34,11 @@ solnForFile file = do
   content <- TIO.readFile file
   let input_lines = T.lines content
       (cubes, instrs) = parseInput input_lines
+
+  cols <- vecFromList cubes
+
   putStrLn "Cubes: "
-  mapM_ print cubes
+  Vec.mapM_ print cols
 
   putStrLn "\nInstructions"
   mapM_ print instrs
@@ -46,16 +49,19 @@ data Instr = Instr {
   instrTo    :: Int
 } deriving Show
 
-execInstr :: Instr -> Vector [Char] -> Vector [Char]
-execInstr (Instr count from to) = undefined
+execInstr :: Instr -> IOVector [Char] -> IO ()
+execInstr (Instr count from to) cols = undefined
 
-parseInput :: [T.Text] -> (Vector [Char], [Instr])
+vecFromList :: [[Char]] -> IO (IOVector [Char])
+vecFromList list = Vec.generate (length list) (list !!)
+
+parseInput :: [T.Text] -> ([[Char]], [Instr])
 parseInput input_lines = 
   let (cube_lines, rest) = span (\l -> "[" `T.isInfixOf` l) input_lines
       instr_lines = drop 2 rest
 
       input_cubes = map parseCubes cube_lines
-   in (Vec.fromList $ inputCubesToCols input_cubes, map parseInstr instr_lines)
+   in (inputCubesToCols input_cubes, map parseInstr instr_lines)
 
 inputCubesToCols :: [[Maybe Char]] -> [[Char]]
 inputCubesToCols input_cubes = 
