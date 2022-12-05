@@ -34,14 +34,14 @@ solnForFile file = do
   content <- TIO.readFile file
   let input_lines = T.lines content
       (cubes, instrs) = parseInput input_lines
+  putStrLn "Cols:"
+  mapM_ print cubes
+  putStrLn ""
 
   cols <- vecFromList cubes
 
-  putStrLn "Cubes: "
-  Vec.mapM_ print cols
+  mapM_ (`iterInstr` cols) instrs 
 
-  putStrLn "\nInstructions"
-  mapM_ print instrs
 
 data Instr = Instr {
   instrCount :: Int, 
@@ -49,8 +49,24 @@ data Instr = Instr {
   instrTo    :: Int
 } deriving Show
 
+iterInstr :: Instr -> IOVector [Char] -> IO ()
+iterInstr instr cols = do
+  execInstr instr cols
+  putStrLn $ "Instr: " <> show instr
+  putStrLn "Cols: "
+  Vec.mapM_ print cols
+  putStrLn ""
+
 execInstr :: Instr -> IOVector [Char] -> IO ()
-execInstr (Instr count from to) cols = undefined
+execInstr (Instr count from to) cols = do 
+  from_col <- Vec.read cols from_i
+  to_col   <- Vec.read cols to_i
+  let (from_cubes, from_rest) = splitAt count from_col
+  Vec.write cols from_i from_rest
+  Vec.write cols to_i   (from_cubes <> to_col)
+  where 
+    from_i = from - 1
+    to_i = to - 1
 
 vecFromList :: [[Char]] -> IO (IOVector [Char])
 vecFromList list = Vec.generate (length list) (list !!)
