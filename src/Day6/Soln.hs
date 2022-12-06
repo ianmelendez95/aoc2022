@@ -37,6 +37,6 @@ solnForFile file = do
 
 findUnique :: Int -> [Char] -> Int
 findUnique i cs = 
-  if Set.size (Set.fromList (take 4 cs)) < 4
+  if Set.size (Set.fromList (take 14 cs)) < 14
     then findUnique (i + 1) (drop 1 cs)
-    else i + 4
+    else i + 14
