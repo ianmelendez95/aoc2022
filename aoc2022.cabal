@@ -30,6 +30,7 @@ library
       Day3.Soln
       Day4.Soln
       Day5.Soln
+      Day6.Soln
       Lib
   other-modules:
       Paths_aoc2022
