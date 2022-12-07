@@ -62,12 +62,16 @@ solnForFile file = do
       cmds = parseTermLines term_lines
       fs = replayCmds "/" cmds Map.empty
       sizes = resolveSizes fs
-  mapM_ print cmds
-  mapM_ print (Map.toList fs)
-  putStrLn "\n[Sizes]"
-  mapM_ print (Map.toList sizes)
+  -- mapM_ print cmds
+  -- mapM_ print (Map.toList fs)
+  -- putStrLn "\n[Sizes]"
+  -- mapM_ print (Map.toList sizes)
 
-  let answer = sum $ filter (<= 100000) (map snd (Map.toList sizes))
+  -- let answer = sum $ filter (<= 100000) (map snd (Map.toList sizes))
+  let (Just used) = Map.lookup "/" sizes
+      free   = 70000000 - used
+      needed = 30000000 - free
+      answer = find (>= needed) $ sort (map snd (Map.toList sizes))
   putStrLn $ "Answer: " <> show answer
 
 resolveSizes :: FS -> DirSizes
