@@ -67,6 +67,9 @@ solnForFile file = do
   putStrLn "\n[Sizes]"
   mapM_ print (Map.toList sizes)
 
+  let answer = sum $ filter (<= 100000) (map snd (Map.toList sizes))
+  putStrLn $ "Answer: " <> show answer
+
 resolveSizes :: FS -> DirSizes
 resolveSizes fs = 
   let (FSEnv _ sizes) = execState (resolveSize "/") (FSEnv fs Map.empty)
