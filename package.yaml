@@ -39,6 +39,7 @@ library:
   - text
   - containers
   - vector
+  - filepath
 
 executables:
   aoc2022-exe:
