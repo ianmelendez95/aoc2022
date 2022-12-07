@@ -40,6 +40,8 @@ library:
   - containers
   - vector
   - filepath
+  - mtl
+  - lens
 
 executables:
   aoc2022-exe:

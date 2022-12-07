@@ -1,6 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Day7.Soln where
+
+import Control.Lens
 
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -23,7 +26,25 @@ import qualified Data.Vector.Mutable as Vec
 
 import System.FilePath.Posix
 
+import Control.Monad.State.Lazy
+
 import Debug.Trace
+
+type FSState = State FSEnv
+
+data FSEnv = FSEnv {
+  _fsenvFS    :: FS,
+  _fsenvSizes :: DirSizes
+}
+
+data Cmd = CdUp | CdRoot | CdDir String | Ls [LsOut] deriving Show
+data LsOut = LsFile String Int | LsDir String deriving Show 
+
+data Dir = Dir Int [String] deriving Show
+type FS = Map String Dir
+type DirSizes = Map String Int
+
+makeLenses ''FSEnv
 
 shortFile :: FilePath
 shortFile = "src/Day7/short-input.txt"
@@ -40,15 +61,29 @@ solnForFile file = do
   let term_lines = T.lines content
       cmds = parseTermLines term_lines
       fs = replayCmds "/" cmds Map.empty
+      sizes = resolveSizes fs
   mapM_ print cmds
   mapM_ print (Map.toList fs)
-  putStrLn $ "Answer: "
+  putStrLn "\n[Sizes]"
+  mapM_ print (Map.toList sizes)
 
-data Cmd = CdUp | CdRoot | CdDir String | Ls [LsOut] deriving Show
-data LsOut = LsFile String Int | LsDir String deriving Show 
+resolveSizes :: FS -> DirSizes
+resolveSizes fs = 
+  let (FSEnv _ sizes) = execState (resolveSize "/") (FSEnv fs Map.empty)
+   in sizes
 
-data Dir = Dir Int [String] deriving Show
-type FS = Map String Dir
+resolveSize :: String -> FSState Int
+resolveSize path = do
+  existing_size <- uses fsenvSizes (Map.lookup path)
+  case existing_size of 
+    Just size -> pure size
+    Nothing   -> do 
+      path_dir <- uses fsenvFS (Map.lookup path)
+      let Just (Dir fsize subs) = path_dir
+      sub_sizes <- traverse (resolveSize . (path </>)) subs
+      let path_size = fsize + sum sub_sizes
+      fsenvSizes %= Map.insert path path_size
+      pure path_size
 
 replayCmds :: String -> [Cmd] -> FS -> FS
 replayCmds _ [] fs = fs
