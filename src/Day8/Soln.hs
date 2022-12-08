@@ -57,8 +57,11 @@ soln file = do
   let tree_lines = T.lines content
       tree_heights = parseTreeLines tree_lines
       tree_vis = treeVisibility tree_heights
+      answer = length . filter id . map snd . Map.toList $ tree_vis
   mapM_ print (Map.toList tree_heights)
   mapM_ print (Map.toList tree_vis)
+  putStrLn $ "Answer: " <> show answer
+
 
 treeVisibility :: Map Point Int -> Map Point Bool
 treeVisibility heights = evalState run (TreeE heights Map.empty) 
@@ -86,7 +89,7 @@ resolveHighest dir point = do
   let adj_point = adjPoint dir point
   adj_exists <- pointExists adj_point
   if not adj_exists 
-    then pure 0 
+    then pure (-1) 
     else do
       existing_highest <- uses treeHighest (Map.lookup (dir, point))
       case existing_highest of 
