@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
 
 module Day8.Soln where
 
@@ -33,14 +34,13 @@ import Debug.Trace
 type AdjHighest = (Int, Int, Int, Int) -- (highest left, up, right, down)
 type Point = (Int, Int)
 
+data Dir = DUp | DRight | DDown | DLeft deriving (Eq, Ord)
+
 type TreeS = State TreeE 
 
 data TreeE = TreeE{
-  _treeHeights      :: Map Point Int,
-  _treeHighestLeft  :: Map Point Int,
-  _treeHighestRight :: Map Point Int,
-  _treeHighestUp    :: Map Point Int,
-  _treeHighestDown  :: Map Point Int 
+  _treeHeights :: Map Point Int,
+  _treeHighest :: Map (Dir, Point) Int
 }
 
 makeLenses ''TreeE
@@ -56,7 +56,54 @@ soln file = do
   content <- TIO.readFile file
   let tree_lines = T.lines content
       tree_heights = parseTreeLines tree_lines
+      tree_vis = treeVisibility tree_heights
   mapM_ print (Map.toList tree_heights)
+  mapM_ print (Map.toList tree_vis)
+
+treeVisibility :: Map Point Int -> Map Point Bool
+treeVisibility heights = evalState run (TreeE heights Map.empty) 
+  where 
+    run :: TreeS (Map Point Bool)
+    run = do 
+      all_points <- uses treeHeights (map fst . Map.toList)
+      point_vis  <- traverse (tupleResultA isVisible) all_points
+      pure $ Map.fromList point_vis
+
+tupleResultA :: Applicative m => (a -> m b) -> a -> m (a, b)
+tupleResultA f x = (x,) <$> f x
+
+isVisible :: Point -> TreeS Bool
+isVisible point = or <$> traverse dirVisible [DUp, DDown, DLeft, DRight]
+  where 
+    dirVisible :: Dir -> TreeS Bool
+    dirVisible dir = do 
+      dir_highest  <- resolveHighest dir point
+      point_height <- pointHeight point
+      pure $ point_height > dir_highest
+
+resolveHighest :: Dir -> Point -> TreeS Int
+resolveHighest dir point = do
+  existing_highest <- uses treeHighest (Map.lookup (dir, point))
+  case existing_highest of 
+    Just height -> pure height
+    Nothing -> do 
+      let adj_point = adjPoint dir point
+      adj_height  <- pointHeight adj_point
+      adj_highest <- max adj_height <$> resolveHighest dir adj_point
+      treeHighest%= Map.insert (dir, point) adj_highest
+      pure adj_highest
+  where
+    adjPoint :: Dir -> Point -> Point
+    adjPoint DLeft  (x, y) = (x - 1, y)
+    adjPoint DRight (x, y) = (x + 1, y)
+    adjPoint DUp    (x, y) = (x, y + 1)
+    adjPoint DDown  (x, y) = (x, y + 1)
+
+pointHeight :: Point -> TreeS Int
+pointHeight point = uses treeHeights (fromMaybe 0 . Map.lookup point)
+
+-- computeHighestUp :: Point -> TreeS Int
+-- computeHighestUp point = 
 
 parseTreeLines :: [T.Text] -> Map Point Int
 parseTreeLines input = 
@@ -66,47 +113,3 @@ parseTreeLines input =
     parseRow row line = 
       let heights = map digitToInt (T.unpack line)
        in Map.fromList $ zipWith (\col h -> ((row, col), h)) [0..] heights
-
--- resolveTreeVisible :: Point -> TreeS Bool
--- resolveTreeVisible point = do
---   existing_vis <- uses treeVisible (Map.lookup point)
---   case existing_vis of 
---     Just vis -> pure vis
---     Nothing -> do 
---       left_vis  <- resolveTreeVisible (left point)
---       right_vis <- resolveTreeVisible (right point)
---       up_vis    <- resolveTreeVisible (up point)
---       down_vis  <- resolveTreeVisible (down point)
---       let vis = left_vs || right_vis || up_vis || down_vis
---       undefined
-
-resolveHighestUp :: Point -> TreeS Int
-resolveHighestUp point = do
-  existing_highest <- uses treeHighestUp (Map.lookup point)
-  case existing_highest of 
-    Just height -> pure height
-    Nothing -> do 
-      let up_point = up point
-      up_height  <- getHeight up_point
-      up_highest <- max up_height <$> resolveHighestUp up_point
-      treeHighestUp %= Map.insert point up_highest
-      pure up_highest
-
-getHeight :: Point -> TreeS Int
-getHeight point = uses treeHeights (fromMaybe 0 . Map.lookup point)
-
--- computeHighestUp :: Point -> TreeS Int
--- computeHighestUp point = 
-
-
-left :: Point -> Point
-left (x, y) = (x - 1, y)
-
-right :: Point -> Point
-right (x, y) = (x + 1, y)
-
-up :: Point -> Point
-up (x, y) = (x, y + 1)
-
-down :: Point -> Point
-down (x, y) = (x, y + 1)
