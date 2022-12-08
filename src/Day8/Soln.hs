@@ -83,21 +83,28 @@ isVisible point = or <$> traverse dirVisible [DUp, DDown, DLeft, DRight]
 
 resolveHighest :: Dir -> Point -> TreeS Int
 resolveHighest dir point = do
-  existing_highest <- uses treeHighest (Map.lookup (dir, point))
-  case existing_highest of 
-    Just height -> pure height
-    Nothing -> do 
-      let adj_point = adjPoint dir point
-      adj_height  <- pointHeight adj_point
-      adj_highest <- max adj_height <$> resolveHighest dir adj_point
-      treeHighest%= Map.insert (dir, point) adj_highest
-      pure adj_highest
+  let adj_point = adjPoint dir point
+  adj_exists <- pointExists adj_point
+  if not adj_exists 
+    then pure 0 
+    else do
+      existing_highest <- uses treeHighest (Map.lookup (dir, point))
+      case existing_highest of 
+        Just height -> pure height
+        Nothing -> do 
+          adj_height  <- pointHeight adj_point
+          adj_highest <- max adj_height <$> resolveHighest dir adj_point
+          treeHighest%= Map.insert (dir, point) adj_highest
+          pure adj_highest
   where
     adjPoint :: Dir -> Point -> Point
     adjPoint DLeft  (x, y) = (x - 1, y)
     adjPoint DRight (x, y) = (x + 1, y)
     adjPoint DUp    (x, y) = (x, y + 1)
     adjPoint DDown  (x, y) = (x, y + 1)
+
+pointExists :: Point -> TreeS Bool
+pointExists point = uses treeHeights (point `Map.member`)
 
 pointHeight :: Point -> TreeS Int
 pointHeight point = uses treeHeights (fromMaybe 0 . Map.lookup point)
