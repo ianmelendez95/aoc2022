@@ -29,6 +29,21 @@ import System.FilePath.Posix
 import Control.Monad.State.Lazy
 
 import Debug.Trace
+      
+type AdjHighest = (Int, Int, Int, Int) -- (highest left, up, right, down)
+type Point = (Int, Int)
+
+type TreeS = State TreeE 
+
+data TreeE = TreeE{
+  _treeHeights      :: Map Point Int,
+  _treeHighestLeft  :: Map Point Int,
+  _treeHighestRight :: Map Point Int,
+  _treeHighestUp    :: Map Point Int,
+  _treeHighestDown  :: Map Point Int 
+}
+
+makeLenses ''TreeE
 
 shortFile :: FilePath
 shortFile = "src/Day8/short-input.txt"
@@ -42,8 +57,6 @@ soln file = do
   let tree_lines = T.lines content
       tree_heights = parseTreeLines tree_lines
   mapM_ print (Map.toList tree_heights)
-      
-type Point = (Int, Int)
 
 parseTreeLines :: [T.Text] -> Map Point Int
 parseTreeLines input = 
@@ -53,4 +66,47 @@ parseTreeLines input =
     parseRow row line = 
       let heights = map digitToInt (T.unpack line)
        in Map.fromList $ zipWith (\col h -> ((row, col), h)) [0..] heights
-  
+
+-- resolveTreeVisible :: Point -> TreeS Bool
+-- resolveTreeVisible point = do
+--   existing_vis <- uses treeVisible (Map.lookup point)
+--   case existing_vis of 
+--     Just vis -> pure vis
+--     Nothing -> do 
+--       left_vis  <- resolveTreeVisible (left point)
+--       right_vis <- resolveTreeVisible (right point)
+--       up_vis    <- resolveTreeVisible (up point)
+--       down_vis  <- resolveTreeVisible (down point)
+--       let vis = left_vs || right_vis || up_vis || down_vis
+--       undefined
+
+resolveHighestUp :: Point -> TreeS Int
+resolveHighestUp point = do
+  existing_highest <- uses treeHighestUp (Map.lookup point)
+  case existing_highest of 
+    Just height -> pure height
+    Nothing -> do 
+      let up_point = up point
+      up_height  <- getHeight up_point
+      up_highest <- max up_height <$> resolveHighestUp up_point
+      treeHighestUp %= Map.insert point up_highest
+      pure up_highest
+
+getHeight :: Point -> TreeS Int
+getHeight point = uses treeHeights (fromMaybe 0 . Map.lookup point)
+
+-- computeHighestUp :: Point -> TreeS Int
+-- computeHighestUp point = 
+
+
+left :: Point -> Point
+left (x, y) = (x - 1, y)
+
+right :: Point -> Point
+right (x, y) = (x + 1, y)
+
+up :: Point -> Point
+up (x, y) = (x, y + 1)
+
+down :: Point -> Point
+down (x, y) = (x, y + 1)
