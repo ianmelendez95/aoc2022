@@ -101,10 +101,10 @@ resolveHighest dir point = do
           pure adj_highest
   where
     adjPoint :: Dir -> Point -> Point
-    adjPoint DLeft  (x, y) = (x - 1, y)
-    adjPoint DRight (x, y) = (x + 1, y)
-    adjPoint DUp    (x, y) = (x, y + 1)
-    adjPoint DDown  (x, y) = (x, y + 1)
+    adjPoint DUp    (m, n) = (m - 1, n)
+    adjPoint DDown  (m, n) = (m + 1, n)
+    adjPoint DLeft  (m, n) = (m, n - 1)
+    adjPoint DRight (m, n) = (m, n + 1)
 
 pointExists :: Point -> TreeS Bool
 pointExists point = uses treeHeights (point `Map.member`)
