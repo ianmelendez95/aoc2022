@@ -34,11 +34,14 @@ import Debug.Trace
 type Move = (Dir, Int)
 data Dir  = DRight | DLeft | DUp | DDown deriving Show
 
-type Rope  = (Point, Point) -- (head, tail)
-type Point = (Int, Int)
+type Rope     = [Point]
+type Point    = (Int, Int)
       
 shortFile :: FilePath
 shortFile = "src/Day9/short-input.txt"
+
+shortFile2 :: FilePath
+shortFile2 = "src/Day9/short-input2.txt"
 
 fullFile :: FilePath
 fullFile = "src/Day9/full-input.txt"
@@ -48,21 +51,36 @@ soln file = do
   content <- TIO.readFile file
   let move_lines = T.lines content
       moves = map parseMoveLine move_lines
-      ropes = scanl' iterMove ((0, 0), (0, 0)) (expandMoves moves)
-      tail_points = map snd ropes
+      ropes = scanl' iterRope (replicate 10 (0,0)) (expandMoves moves)
+      tail_points = map last ropes
       unique_tail_points = Set.toList (Set.fromList tail_points)
   -- mapM_ print moves
   -- mapM_ print (zip [0..] ropes)
   putStrLn $ "Answer: " <> show (length unique_tail_points)
 
-iterMove :: Rope -> Move -> Rope
-iterMove (rhead, rtail) move = 
-  let rhead' = movePoint move rhead
-      d@(dx, dy) = subPoints rhead' rtail
+iterRope :: Rope -> Move -> Rope
+iterRope (h:rope) move = 
+  let h' = movePoint move h
+   in h' : dragTails h' rope 
+
+-- iterRope :: (Point, Point) -> Move -> (Point, Point)
+-- iterRope (rhead, rtail) move = 
+--   let rhead' = movePoint move rhead
+--    in (rhead', dragTail rhead' rtail)
+
+dragTails :: Point -> [Point] -> [Point]
+dragTails _ [] = []
+dragTails h (t:ts) = 
+  let t' = dragTail h t
+   in t' : dragTails t' ts
+
+dragTail :: Point -> Point -> Point
+dragTail rhead rtail = 
+  let d@(dx, dy) = subPoints rhead rtail
    in if abs dx <= 1 && abs dy <= 1
-        then (rhead', rtail)
+        then rtail
         else let dunit = unit d
-              in (rhead', addPoints rtail dunit)
+              in addPoints rtail dunit
 
 unit :: Point -> Point
 unit (x, y) = (dimUnit x, dimUnit y)
