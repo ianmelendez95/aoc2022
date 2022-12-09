@@ -31,8 +31,11 @@ import Control.Monad.State.Lazy
 
 import Debug.Trace
 
-data Move = Move Dir Int deriving Show
-data Dir = DRight | DLeft | DUp | DDown deriving Show
+type Move = (Dir, Int)
+data Dir  = DRight | DLeft | DUp | DDown deriving Show
+
+type Rope  = (Point, Point) -- (head, tail)
+type Point = (Int, Int)
       
 shortFile :: FilePath
 shortFile = "src/Day9/short-input.txt"
@@ -45,7 +48,48 @@ soln file = do
   content <- TIO.readFile file
   let move_lines = T.lines content
       moves = map parseMoveLine move_lines
-  mapM_ print moves
+      ropes = scanl' iterMove ((0, 0), (0, 0)) (expandMoves moves)
+      tail_points = map snd ropes
+      unique_tail_points = Set.toList (Set.fromList tail_points)
+  -- mapM_ print moves
+  -- mapM_ print (zip [0..] ropes)
+  putStrLn $ "Answer: " <> show (length unique_tail_points)
+
+iterMove :: Rope -> Move -> Rope
+iterMove (rhead, rtail) move = 
+  let rhead' = movePoint move rhead
+      d@(dx, dy) = subPoints rhead' rtail
+   in if abs dx <= 1 && abs dy <= 1
+        then (rhead', rtail)
+        else let dunit = unit d
+              in (rhead', addPoints rtail dunit)
+
+unit :: Point -> Point
+unit (x, y) = (dimUnit x, dimUnit y)
+  where 
+    dimUnit xy = 
+      case compare xy 0 of 
+        LT -> (-1)
+        EQ -> 0
+        GT -> 1
+
+addPoints :: Point -> Point -> Point
+addPoints (x, y) (x', y') = (x + x', y + y')
+
+subPoints :: Point -> Point -> Point
+subPoints (x, y) (x', y') = (x - x', y - y')
+
+movePoint :: Move -> Point -> Point
+movePoint (DRight, n) (x, y) = (x + n, y)
+movePoint (DLeft, n)  (x, y) = (x - n, y)
+movePoint (DUp, n)    (x, y) = (x, y + n)
+movePoint (DDown, n)  (x, y) = (x, y - n)
+
+expandMoves :: [Move] -> [Move]
+expandMoves = concatMap replicateMove
+  where 
+    replicateMove :: Move -> [Move]
+    replicateMove (dir, count) = replicate count (dir, 1)
 
 parseMoveLine :: T.Text -> Move
 parseMoveLine line = 
@@ -57,5 +101,5 @@ parseMoveLine line =
           "D" -> DDown
           "U" -> DUp
           _ -> error ""
-   in Move dir (read (T.unpack count))
+   in (dir, (read (T.unpack count)))
     
