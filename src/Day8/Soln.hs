@@ -59,10 +59,10 @@ soln file = do
   let tree_lines = T.lines content
       tree_heights = parseTreeLines tree_lines
       tree_scores = treeScores tree_heights
-      -- answer = length . filter id . map snd . Map.toList $ tree_scores
+      answer = maximum . map snd . Map.toList $ tree_scores
   -- mapM_ print (Map.toList tree_heights)
-  mapM_ print (Map.toList tree_scores)
-  -- putStrLn $ "Answer: " <> show answer
+  -- mapM_ print (Map.toList tree_scores)
+  putStrLn $ "Answer: " <> show answer
 
 
 
