@@ -52,7 +52,7 @@ soln file = do
   content <- TIO.readFile file
   let instr_lines = T.lines content
       instrs = map parseInstr instr_lines
-      sigs = reverse $ evalInstrs instrs
+      sigs = reverse . tail $ evalInstrs instrs
       -- samples = collectSigs sigs
       pixels = zipWith spriteVisible [0..] sigs
   -- mapM_ print instrs
