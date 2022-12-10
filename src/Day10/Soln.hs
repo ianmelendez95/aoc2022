@@ -31,10 +31,18 @@ import Control.Monad.State.Lazy
 
 import Debug.Trace
 
-data Instr = Addx Int | Noop deriving Show
+data Instr = AddX Int | Noop deriving Show
+
+type SigS = State [Int]
+
+emptySigE :: [Int]
+emptySigE = [1]
 
 shortFile :: FilePath
 shortFile = "src/Day10/short-input.txt"
+
+shortFile2 :: FilePath
+shortFile2 = "src/Day10/short-input2.txt"
 
 fullFile :: FilePath
 fullFile = "src/Day10/full-input.txt"
@@ -44,10 +52,25 @@ soln file = do
   content <- TIO.readFile file
   let instr_lines = T.lines content
       instrs = map parseInstr instr_lines
+      sigs = evalInstrs instrs
   mapM_ print instrs
+  mapM_ print (zip [1..] (reverse sigs))
+
+evalInstrs :: [Instr] -> [Int]
+evalInstrs instrs = execState (mapM_ execInstr instrs) [1]
+
+execInstr :: Instr -> SigS ()
+execInstr Noop = do 
+  cur_strength <- gets head
+  modify (cur_strength :)
+execInstr (AddX x) = do 
+  cur_strength <- gets head
+  modify (cur_strength :)
+  modify (cur_strength + x :)
 
 parseInstr :: T.Text -> Instr
 parseInstr "noop" = Noop
 parseInstr input = 
   let [_, amt] = T.words input
-   in Addx (read (T.unpack amt))
+   in AddX (read (T.unpack amt))
+  
