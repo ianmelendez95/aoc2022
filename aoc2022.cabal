@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Day1.Soln
+      Day10.Soln
       Day2.Soln
       Day3.Soln
       Day4.Soln
