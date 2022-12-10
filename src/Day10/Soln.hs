@@ -52,9 +52,43 @@ soln file = do
   content <- TIO.readFile file
   let instr_lines = T.lines content
       instrs = map parseInstr instr_lines
-      sigs = evalInstrs instrs
-  mapM_ print instrs
-  mapM_ print (zip [1..] (reverse sigs))
+      sigs = reverse $ evalInstrs instrs
+      -- samples = collectSigs sigs
+      pixels = zipWith (\pos sig -> (pos, spriteVisible pos sig)) [0..] sigs
+  -- mapM_ print instrs
+  -- mapM_ print (zip [1..] sigs)
+  -- mapM_ print samples
+  -- putStrLn "[Answer]"
+  -- print $ sum (map (uncurry (*)) samples)
+  mapM_ print pixels
+  TIO.putStrLn $ renderPixels (map snd pixels)
+
+renderPixels :: [Bool] -> T.Text
+renderPixels = T.unlines . renderPixelRows
+
+renderPixelRows :: [Bool] -> [T.Text]
+renderPixelRows [] = []
+renderPixelRows ps = 
+  let (row_ps, rest) = splitAt 40 ps
+   in T.pack (map renderPixel row_ps) : renderPixelRows rest
+  where 
+    renderPixel :: Bool -> Char
+    renderPixel True = '#'
+    renderPixel False = '.'
+
+spriteVisible :: Int -> Int -> Bool
+spriteVisible crt_pos sprite_pos = abs (crt_pos - sprite_pos) <= 1
+
+collectSigs :: [Int] -> [(Int, Int)]
+collectSigs sigs = 
+  let (first : rest) = drop 19 (zip [1..] sigs)
+   in first : collectRest rest
+  where 
+    collectRest :: [(Int, Int)] -> [(Int, Int)] 
+    collectRest sigs = 
+      case drop 39 sigs of 
+        [] -> []
+        (next : rest) -> next : collectRest rest
 
 evalInstrs :: [Instr] -> [Int]
 evalInstrs instrs = execState (mapM_ execInstr instrs) [1]
