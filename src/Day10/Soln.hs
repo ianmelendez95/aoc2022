@@ -54,14 +54,14 @@ soln file = do
       instrs = map parseInstr instr_lines
       sigs = reverse $ evalInstrs instrs
       -- samples = collectSigs sigs
-      pixels = zipWith (\pos sig -> (pos, spriteVisible pos sig)) [0..] sigs
+      pixels = zipWith spriteVisible [0..] sigs
   -- mapM_ print instrs
   -- mapM_ print (zip [1..] sigs)
   -- mapM_ print samples
   -- putStrLn "[Answer]"
   -- print $ sum (map (uncurry (*)) samples)
-  mapM_ print pixels
-  TIO.putStrLn $ renderPixels (map snd pixels)
+  mapM_ print (zip [1..] (zip sigs pixels))
+  TIO.putStrLn $ renderPixels pixels
 
 renderPixels :: [Bool] -> T.Text
 renderPixels = T.unlines . renderPixelRows
@@ -77,7 +77,7 @@ renderPixelRows ps =
     renderPixel False = '.'
 
 spriteVisible :: Int -> Int -> Bool
-spriteVisible crt_pos sprite_pos = abs (crt_pos - sprite_pos) <= 1
+spriteVisible crt_pos sprite_pos = abs ((crt_pos `mod` 40) - sprite_pos) <= 1
 
 collectSigs :: [Int] -> [(Int, Int)]
 collectSigs sigs = 
