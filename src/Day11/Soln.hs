@@ -32,19 +32,29 @@ import Control.Monad.State.Lazy
 
 import Debug.Trace
 
-data Monkey = Monkey Int [Int] Op Test deriving Show
+data Monkey = Monkey {
+  monkeyId :: Int,
+  monkeyInitialItems :: [Int],
+  monkeyOperation    :: Op,
+  monkeyTest         :: Test 
+} deriving Show
 type Items  = Map Int [Int]
 
 data Op     = Op OpType OpVal deriving Show
 data OpType = Add | Mult deriving Show
 data OpVal  = VInt Int | VOld deriving Show
 
-data Test = Test Int Int Int deriving Show -- divisible true false
+data Test = Test {
+  testDivisor   :: Int,
+  testTrueYeet  :: Int, 
+  testFalseYeet :: Int 
+} deriving Show
 
 type MonS = State MonE
 
 data MonE = MonE {
   _moneItems    :: Map Int [Int],
+  _moneAllDiv   :: Int,  -- the divisor for all of them multiplied
   _moneActivity :: Map Int Int
 }
 
@@ -61,9 +71,8 @@ soln file = do
   content <- TIO.readFile file
   let input_lines = T.lines content
       monkeys = parseMonkeys input_lines
-      monkey_items = monkeyItems monkeys
-      monkey_rounds = zip [(1 :: Int)..] . take 1000 . tail $ iterate (monkeyRound monkeys) (MonE monkey_items Map.empty)
-      final_round@(_, MonE _ final_activity) = last monkey_rounds
+      monkey_rounds = zip [(1 :: Int)..] . take 10000 . tail $ iterate (monkeyRound monkeys) (monkeyEnv monkeys)
+      final_round@(_, MonE _ _ final_activity) = last monkey_rounds
       most_active_prod = product . take 2 . reverse . sort . map snd $ Map.toList final_activity
   -- mapM_ print monkeys
 
@@ -77,31 +86,39 @@ soln file = do
   putStrLn $ "Answer: " <> show most_active_prod
   where 
     printRound :: (Int, MonE) -> IO ()
-    printRound (round, MonE items activity) = do
+    printRound (round, MonE items _ activity) = do
       putStrLn $ "\n[Post Round " ++ show round ++ "]"
       putStrLn "-- Items --"
       mapM_ print (Map.toList items)
       putStrLn "-- Activity --"
       mapM_ print (Map.toList activity)
 
+monkeyEnv :: [Monkey] -> MonE
+monkeyEnv monkeys = 
+  let all_div = product $ map monkeyDivisor monkeys
+      items = monkeyItems monkeys
+   in MonE items all_div Map.empty
+  where
+    monkeyDivisor :: Monkey -> Int
+    monkeyDivisor = testDivisor . monkeyTest
+
+    monkeyItems :: [Monkey] -> Items
+    monkeyItems = Map.fromList . map (\monkey -> (monkeyId monkey, monkeyInitialItems monkey)) 
 
 monkeyRound :: [Monkey] -> MonE -> MonE
 monkeyRound monkeys = execState (mapM_ monkeyInspect monkeys)
-
-monkeyItems :: [Monkey] -> Items
-monkeyItems = Map.fromList . map (\(Monkey id items _ _) -> (id, items)) 
 
 monkeyInspect :: Monkey -> MonS ()
 monkeyInspect (Monkey id _ op (Test test_div test_true test_false)) = do 
   cur_items_res <- uses moneItems (Map.lookup id)
   let (Just items) = cur_items_res
-      inspected_items = map inspectItem items
-      inspected_count = length inspected_items
+  inspected_items <- traverse inspectItem items
+  let inspected_count = length inspected_items
   mapM_ (\item -> yeetItem item (testItem item)) inspected_items
   moneItems %= Map.insert id []  -- clear out the monkey after it's turn
   moneActivity %= Map.insertWith (+) id inspected_count
   where
-    inspectItem :: Int -> Int
+    inspectItem :: Int -> MonS Int
     inspectItem = evalOp op
 
     testItem :: Int -> Int
@@ -114,8 +131,10 @@ monkeyInspect (Monkey id _ op (Test test_div test_true test_false)) = do
     yeetItem worry_val dest_monkey =
       moneItems %= Map.adjust (worry_val :) dest_monkey
 
-evalOp :: Op -> Int -> Int
-evalOp (Op op_type op_val) worry_val = worry_val `valOp` eval_val
+evalOp :: Op -> Int -> MonS Int
+evalOp (Op op_type op_val) worry_val = do 
+  all_div <- use moneAllDiv
+  pure $ (worry_val `valOp` eval_val) `mod` all_div 
   where 
     valOp :: Int -> Int -> Int
     valOp = 
