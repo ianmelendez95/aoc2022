@@ -63,19 +63,23 @@ soln file = do
       monkeys = parseMonkeys input_lines
       monkey_items = monkeyItems monkeys
       monkey_rounds = zip [(1 :: Int)..] . take 20 . tail $ iterate (monkeyRound monkeys) (MonE monkey_items Map.empty)
-  mapM_ print monkeys
+      (_, MonE _ final_activity) = last monkey_rounds
+      most_active_prod = product . take 2 . reverse . sort . map snd $ Map.toList final_activity
+  -- mapM_ print monkeys
 
-  putStrLn "\n[Initial]"
-  mapM_ print (Map.toList monkey_items)
+  -- putStrLn "\n[Initial]"
+  -- mapM_ print (Map.toList monkey_items)
 
-  mapM_ printRound monkey_rounds
+  -- mapM_ printRound monkey_rounds
+
+  putStrLn $ "Answer: " <> show most_active_prod
   where 
     printRound :: (Int, MonE) -> IO ()
     printRound (round, MonE items activity) = do
       putStrLn $ "\n[Post Round " ++ show round ++ "]"
       putStrLn "-- Items --"
       mapM_ print (Map.toList items)
-      putStrLn "\n-- Activity --"
+      putStrLn "-- Activity --"
       mapM_ print (Map.toList activity)
 
 
