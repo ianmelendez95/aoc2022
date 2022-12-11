@@ -44,7 +44,8 @@ data Test = Test Int Int Int deriving Show -- divisible true false
 type MonS = State MonE
 
 data MonE = MonE {
-  _moneItems   :: Map Int [Int]
+  _moneItems    :: Map Int [Int],
+  _moneActivity :: Map Int Int
 }
 
 makeLenses ''MonE
@@ -61,7 +62,7 @@ soln file = do
   let input_lines = T.lines content
       monkeys = parseMonkeys input_lines
       monkey_items = monkeyItems monkeys
-      monkey_rounds = zip [(1 :: Int)..] . take 20 . tail $ iterate (monkeyRound monkeys) monkey_items
+      monkey_rounds = zip [(1 :: Int)..] . take 20 . tail $ iterate (monkeyRound monkeys) (MonE monkey_items Map.empty)
   mapM_ print monkeys
 
   putStrLn "\n[Initial]"
@@ -69,14 +70,17 @@ soln file = do
 
   mapM_ printRound monkey_rounds
   where 
-    printRound :: (Int, Items) -> IO ()
-    printRound (round, items) = do
+    printRound :: (Int, MonE) -> IO ()
+    printRound (round, MonE items activity) = do
       putStrLn $ "\n[Post Round " ++ show round ++ "]"
+      putStrLn "-- Items --"
       mapM_ print (Map.toList items)
+      putStrLn "\n-- Activity --"
+      mapM_ print (Map.toList activity)
 
 
-monkeyRound :: [Monkey] -> Items -> Items
-monkeyRound monkeys items = _moneItems $ execState (mapM_ monkeyInspect monkeys) (MonE items)
+monkeyRound :: [Monkey] -> MonE -> MonE
+monkeyRound monkeys = execState (mapM_ monkeyInspect monkeys)
 
 monkeyItems :: [Monkey] -> Items
 monkeyItems = Map.fromList . map (\(Monkey id items _ _) -> (id, items)) 
@@ -86,8 +90,10 @@ monkeyInspect (Monkey id _ op (Test test_div test_true test_false)) = do
   cur_items_res <- uses moneItems (Map.lookup id)
   let (Just items) = cur_items_res
       inspected_items = map inspectItem items
+      inspected_count = length inspected_items
   mapM_ (\item -> yeetItem item (testItem item)) inspected_items
   moneItems %= Map.insert id []  -- clear out the monkey after it's turn
+  moneActivity %= Map.insertWith (+) id inspected_count
   where
     inspectItem :: Int -> Int
     inspectItem worry_val = evalOp op worry_val `div` 3
