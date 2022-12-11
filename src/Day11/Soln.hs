@@ -27,17 +27,27 @@ import qualified Data.Vector.Mutable as Vec
 
 import System.FilePath.Posix
 
+import Control.Monad
 import Control.Monad.State.Lazy
 
 import Debug.Trace
 
 data Monkey = Monkey Int [Int] Op Test deriving Show
+type Items  = Map Int [Int]
 
 data Op     = Op OpType OpVal deriving Show
 data OpType = Add | Mult deriving Show
 data OpVal  = VInt Int | VOld deriving Show
 
 data Test = Test Int Int Int deriving Show -- divisible true false
+
+type MonS = State MonE
+
+data MonE = MonE {
+  _moneItems   :: Map Int [Int]
+}
+
+makeLenses ''MonE
 
 shortFile :: FilePath
 shortFile = "src/Day11/short-input.txt"
@@ -50,7 +60,62 @@ soln file = do
   content <- TIO.readFile file
   let input_lines = T.lines content
       monkeys = parseMonkeys input_lines
+      monkey_items = monkeyItems monkeys
+      monkey_rounds = zip [(1 :: Int)..] . take 20 . tail $ iterate (monkeyRound monkeys) monkey_items
   mapM_ print monkeys
+
+  putStrLn "\n[Initial]"
+  mapM_ print (Map.toList monkey_items)
+
+  mapM_ printRound monkey_rounds
+  where 
+    printRound :: (Int, Items) -> IO ()
+    printRound (round, items) = do
+      putStrLn $ "\n[Post Round " ++ show round ++ "]"
+      mapM_ print (Map.toList items)
+
+
+monkeyRound :: [Monkey] -> Items -> Items
+monkeyRound monkeys items = _moneItems $ execState (mapM_ monkeyInspect monkeys) (MonE items)
+
+monkeyItems :: [Monkey] -> Items
+monkeyItems = Map.fromList . map (\(Monkey id items _ _) -> (id, items)) 
+
+monkeyInspect :: Monkey -> MonS ()
+monkeyInspect (Monkey id _ op (Test test_div test_true test_false)) = do 
+  cur_items_res <- uses moneItems (Map.lookup id)
+  let (Just items) = cur_items_res
+      inspected_items = map inspectItem items
+  mapM_ (\item -> yeetItem item (testItem item)) inspected_items
+  moneItems %= Map.insert id []  -- clear out the monkey after it's turn
+  where
+    inspectItem :: Int -> Int
+    inspectItem worry_val = evalOp op worry_val `div` 3
+
+    testItem :: Int -> Int
+    testItem worry_val = 
+      if worry_val `mod` test_div == 0
+        then test_true
+        else test_false
+    
+    yeetItem :: Int -> Int -> MonS ()
+    yeetItem worry_val dest_monkey =
+      moneItems %= Map.adjust (worry_val :) dest_monkey
+
+evalOp :: Op -> Int -> Int
+evalOp (Op op_type op_val) worry_val = worry_val `valOp` eval_val
+  where 
+    valOp :: Int -> Int -> Int
+    valOp = 
+      case op_type of 
+        Mult -> (*)
+        Add  -> (+)
+    
+    eval_val :: Int 
+    eval_val = 
+      case op_val of 
+        VOld -> worry_val
+        (VInt v) -> v
 
 parseMonkeys :: [T.Text] -> [Monkey]
 parseMonkeys [] = []
