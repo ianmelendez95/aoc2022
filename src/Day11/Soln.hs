@@ -62,8 +62,8 @@ soln file = do
   let input_lines = T.lines content
       monkeys = parseMonkeys input_lines
       monkey_items = monkeyItems monkeys
-      monkey_rounds = zip [(1 :: Int)..] . take 20 . tail $ iterate (monkeyRound monkeys) (MonE monkey_items Map.empty)
-      (_, MonE _ final_activity) = last monkey_rounds
+      monkey_rounds = zip [(1 :: Int)..] . take 1000 . tail $ iterate (monkeyRound monkeys) (MonE monkey_items Map.empty)
+      final_round@(_, MonE _ final_activity) = last monkey_rounds
       most_active_prod = product . take 2 . reverse . sort . map snd $ Map.toList final_activity
   -- mapM_ print monkeys
 
@@ -71,6 +71,8 @@ soln file = do
   -- mapM_ print (Map.toList monkey_items)
 
   -- mapM_ printRound monkey_rounds
+
+  printRound final_round
 
   putStrLn $ "Answer: " <> show most_active_prod
   where 
@@ -100,7 +102,7 @@ monkeyInspect (Monkey id _ op (Test test_div test_true test_false)) = do
   moneActivity %= Map.insertWith (+) id inspected_count
   where
     inspectItem :: Int -> Int
-    inspectItem worry_val = evalOp op worry_val `div` 3
+    inspectItem = evalOp op
 
     testItem :: Int -> Int
     testItem worry_val = 
