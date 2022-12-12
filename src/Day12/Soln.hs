@@ -67,18 +67,18 @@ soln file = do
 
 findShortestRoute :: HeightMap -> Point -> Point -> Int
 findShortestRoute heights start end = 
-  let hike_env = execState (explore 0 start) (HikeE heights start end Map.empty)
-      (Just end_dist) = Map.lookup end (hike_env ^. hikeVisited) 
+  let results = evalState (explore 0 start) (HikeE heights start end Map.empty)
+      end_dist = minimum results
    in end_dist
 
-explore :: Int -> Point -> HikeS Bool
+explore :: Int -> Point -> HikeS [Int]
 explore dist cur_point@(m, n) = do 
   -- traceM (show dist <> ": " <> show cur_point)
   visited_result <- uses hikeVisited (Map.lookup cur_point)
   if maybe False (<= dist) visited_result
     then do 
       -- traceM (show cur_point <> ": VISITED") 
-      pure False  -- already visited with a shorter distance
+      pure []  -- already visited with a shorter distance
     else do 
       cur_height_result <- uses hikeHeights (Map.lookup cur_point)
       let (Just cur_height) = cur_height_result
@@ -86,18 +86,19 @@ explore dist cur_point@(m, n) = do
       end_point <- use hikeEnd
       neighbors <- findExplorableNeighbors cur_height end_point
       if cur_point == end_point
-        then pure True -- end of this route
+        then pure [dist] -- end of this route
         else do 
           -- traceM (show cur_point <> ": neighbors " <> show neighbors) 
-          exploreNeighbors neighbors
+          exploreNeighbors [] neighbors
   where 
-    exploreNeighbors :: [Point] -> HikeS Bool
-    exploreNeighbors [] = pure False
-    exploreNeighbors (n:ns) = do
+    exploreNeighbors :: [Int] -> [Point] -> HikeS [Int]
+    exploreNeighbors cur_results [] = pure cur_results
+    exploreNeighbors cur_results (n:ns) = do
       reached_end <- explore (dist + 1) n
-      if reached_end 
-        then pure True
-        else exploreNeighbors ns
+      let results = cur_results <> reached_end
+       in if length results > 100
+            then pure results
+            else exploreNeighbors results ns
 
     findExplorableNeighbors :: Int -> Point -> HikeS [Point]
     findExplorableNeighbors cur_height end_point = sortNeighbors end_point <$> filterTraversablePoints cur_height
