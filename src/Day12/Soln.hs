@@ -73,19 +73,21 @@ findShortestRoute heights start end =
 
 explore :: Int -> Point -> HikeS ()
 explore dist cur_point@(m, n) = do 
-  traceM (show cur_point)
+  -- traceM (show dist <> ": " <> show cur_point)
   visited_result <- uses hikeVisited (Map.lookup cur_point)
-  if maybe False (< dist) visited_result
-    then pure ()  -- already visited with a shorter distance
+  if maybe False (<= dist) visited_result
+    then traceM (show cur_point <> ": VISITED") >> pure ()  -- already visited with a shorter distance
     else do 
       cur_height_result <- uses hikeHeights (Map.lookup cur_point)
       let (Just cur_height) = cur_height_result
+      hikeVisited %= Map.insert cur_point dist
       end_point <- use hikeEnd
       neighbors <- findExplorableNeighbors cur_height end_point
-      hikeVisited %= Map.insert cur_point dist
       if cur_point == end_point
         then pure () -- end of this route
-        else mapM_ (explore (dist + 1)) neighbors
+        else do 
+          traceM (show cur_point <> ": neighbors " <> show neighbors) 
+          mapM_ (explore (dist + 1)) neighbors
   where 
     findExplorableNeighbors :: Int -> Point -> HikeS [Point]
     findExplorableNeighbors cur_height end_point = sortNeighbors end_point <$> filterTraversablePoints cur_height
