@@ -12,6 +12,7 @@ import qualified Data.Text.IO as TIO
 import Data.List
 import Data.Maybe
 import Data.Char
+import Data.Ord
 
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -78,10 +79,20 @@ explore dist cur_point@(m, n) = do
     else do 
       cur_height_result <- uses hikeHeights (Map.lookup cur_point)
       let (Just cur_height) = cur_height_result
-      neighbors <- findExplorableNeighbors cur_height
+      end_point <- use hikeEnd
+      neighbors <- sortNeighbors end_point <$> findExplorableNeighbors cur_height
       hikeVisited %= Map.insert cur_point dist
       mapM_ (explore (dist + 1)) neighbors
   where 
+    sortNeighbors :: Point -> [Point] -> [Point]
+    sortNeighbors end_point = sortOn (pointDistScore end_point)
+    
+    pointDistScore :: Point -> Point -> Int
+    pointDistScore (m1, n1) (m2, n2) = square (m1 - m2) + square (n1 - n2)
+
+    square :: Int -> Int
+    square x = fromInteger (toInteger x ^ (2 :: Integer))
+
     findExplorableNeighbors :: Int -> HikeS [Point]
     findExplorableNeighbors cur_height = filterTraversablePoints cur_height
       [ (m - 1, n)
