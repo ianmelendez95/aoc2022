@@ -35,6 +35,17 @@ import Debug.Trace
 type HeightMap = Map Point Int
 type Point = (Int, Int)
 
+type HikeS = State HikeE
+
+data HikeE = HikeE {
+  _hikeHeights :: HeightMap,
+  _hikeStart   :: Point,
+  _hikeEnd     :: Point, 
+  _hikeVisited :: Map Point Int
+}
+
+makeLenses ''HikeE
+
 shortFile :: FilePath
 shortFile = "src/Day12/short-input.txt"
 
@@ -46,9 +57,49 @@ soln file = do
   content <- TIO.readFile file
   let input_lines = T.lines content
       (height_map, start, end) = parseMap input_lines
+      answer = findShortestRoute height_map start end
   print start
   print end
-  mapM_ print (Map.toList height_map)
+  -- mapM_ print (Map.toList height_map)
+
+  putStrLn $ "Answer: " <> show answer
+
+findShortestRoute :: HeightMap -> Point -> Point -> Int
+findShortestRoute heights start end = 
+  let hike_env = execState (explore 0 start) (HikeE heights start end Map.empty)
+      (Just end_dist) = Map.lookup end (hike_env ^. hikeVisited) 
+   in end_dist
+
+explore :: Int -> Point -> HikeS ()
+explore dist cur_point@(m, n) = do 
+  visited_result <- uses hikeVisited (Map.lookup cur_point)
+  if maybe False (< dist) visited_result
+    then pure ()  -- already visited with a shorter distance
+    else do 
+      cur_height_result <- uses hikeHeights (Map.lookup cur_point)
+      let (Just cur_height) = cur_height_result
+      neighbors <- findExplorableNeighbors cur_height
+      hikeVisited %= Map.insert cur_point dist
+      mapM_ (explore (dist + 1)) neighbors
+  where 
+    findExplorableNeighbors :: Int -> HikeS [Point]
+    findExplorableNeighbors cur_height = filterTraversablePoints cur_height
+      [ (m - 1, n)
+      , (m + 1, n)
+      , (m, n - 1)
+      , (m, n + 1)
+      ]
+
+    filterTraversablePoints :: Int -> [Point] -> HikeS [Point]
+    filterTraversablePoints _ [] = pure []
+    filterTraversablePoints cur_height (p:ps) = do
+      height_result <- uses hikeHeights (Map.lookup p)
+      case height_result of 
+        Nothing -> filterTraversablePoints cur_height ps
+        (Just neighbor_height) -> 
+          if (neighbor_height - cur_height) > 1
+            then filterTraversablePoints cur_height ps
+            else (p:) <$> filterTraversablePoints cur_height ps
 
 parseMap :: [T.Text] -> (HeightMap, Point, Point)
 parseMap lines = 
