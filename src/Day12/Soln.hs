@@ -82,7 +82,9 @@ explore dist cur_point@(m, n) = do
       end_point <- use hikeEnd
       neighbors <- sortNeighbors end_point <$> findExplorableNeighbors cur_height
       hikeVisited %= Map.insert cur_point dist
-      mapM_ (explore (dist + 1)) neighbors
+      if cur_point == end_point
+        then pure () -- end of this route
+        else mapM_ (explore (dist + 1)) neighbors
   where 
     sortNeighbors :: Point -> [Point] -> [Point]
     sortNeighbors end_point = sortOn (pointDistScore end_point)
