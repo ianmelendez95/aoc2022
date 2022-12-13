@@ -39,10 +39,11 @@ type Point = (Int, Int)
 type HikeS = State HikeE
 
 data HikeE = HikeE {
-  _hikeHeights :: HeightMap,
-  _hikeStart   :: Point,
-  _hikeEnd     :: Point, 
-  _hikeVisited :: Map Point Int
+  _hikeHeights  :: HeightMap,
+  _hikeStart    :: Point,
+  _hikeEnd      :: Point, 
+  _hikeVisitedQ :: Set (Int, Point),
+  _hikeVisited  :: Map Point Int
 }
 
 makeLenses ''HikeE
@@ -67,55 +68,42 @@ soln file = do
 
 findShortestRoute :: HeightMap -> Point -> Point -> Int
 findShortestRoute heights start end = 
-  let results = evalState (explore 0 start) (HikeE heights start end Map.empty)
-      end_dist = minimum results
+  let (Just end_dist) = evalState (explore start) (HikeE heights start end (Set.singleton (0, start)) (Map.singleton start 0))
    in end_dist
 
-explore :: Int -> Point -> HikeS [Int]
-explore dist cur_point@(m, n) = do 
-  -- traceM (show dist <> ": " <> show cur_point)
-  visited_result <- uses hikeVisited (Map.lookup cur_point)
-  if maybe False (<= dist) visited_result
-    then do 
-      -- traceM (show cur_point <> ": VISITED") 
-      pure []  -- already visited with a shorter distance
+explore :: Point -> HikeS (Maybe Int)
+explore cur_point@(m, n) = do 
+  end_point <- use hikeEnd
+  dist      <- uses hikeVisited (Map.findWithDefault (error "") cur_point)
+  if cur_point == end_point
+    then pure (Just dist) -- reached end
     else do 
-      cur_height_result <- uses hikeHeights (Map.lookup cur_point)
-      let (Just cur_height) = cur_height_result
-      hikeVisited %= Map.insert cur_point dist
-      end_point <- use hikeEnd
-      neighbors <- findExplorableNeighbors cur_height end_point
-      if cur_point == end_point
-        then pure [dist] -- end of this route
-        else do 
-          -- traceM (show cur_point <> ": neighbors " <> show neighbors) 
-          exploreNeighbors [] neighbors
+      cur_height <- uses hikeHeights (Map.findWithDefault (error "") cur_point)
+      neighbors  <- findExplorableNeighbors cur_height
+      mapM_ (considerNeighbor (dist + 1)) neighbors
+      next_best <- snd <$> uses hikeVisitedQ Set.findMin
+      explore next_best
   where 
-    exploreNeighbors :: [Int] -> [Point] -> HikeS [Int]
-    exploreNeighbors cur_results [] = pure cur_results
-    exploreNeighbors cur_results (n:ns) = do
-      reached_end <- explore (dist + 1) n
-      let results = cur_results <> reached_end
-       in if length results > 100
-            then pure results
-            else exploreNeighbors results ns
+    -- | Check if neighbor is candidate for exploration,
+    -- | and if so add to the queue.
+    considerNeighbor :: Int -> Point -> HikeS ()
+    considerNeighbor dist neighbor = do 
+      neighbor_dist_result <- uses hikeVisited (Map.lookup neighbor)
+      let add_neighbor = maybe True (dist <) neighbor_dist_result
+      if add_neighbor then addNeighbor dist neighbor else pure ()
+    
+    addNeighbor :: Int -> Point -> HikeS ()
+    addNeighbor dist neighbor = do
+      hikeVisited  %= Map.insert neighbor dist 
+      hikeVisitedQ %= Set.insert (dist, neighbor)
 
-    findExplorableNeighbors :: Int -> Point -> HikeS [Point]
-    findExplorableNeighbors cur_height end_point = sortNeighbors end_point <$> filterTraversablePoints cur_height
+    findExplorableNeighbors :: Int -> HikeS [Point]
+    findExplorableNeighbors cur_height = filterTraversablePoints cur_height
       [ (m - 1, n)
       , (m + 1, n)
       , (m, n - 1)
       , (m, n + 1)
       ]
-
-    sortNeighbors :: Point -> [Point] -> [Point]
-    sortNeighbors end_point = sortOn (pointDistScore end_point)
-    
-    pointDistScore :: Point -> Point -> Int
-    pointDistScore (m1, n1) (m2, n2) = square (m1 - m2) + square (n1 - n2)
-
-    square :: Int -> Int
-    square x = fromInteger (toInteger x ^ (2 :: Integer))
 
     filterTraversablePoints :: Int -> [Point] -> HikeS [Point]
     filterTraversablePoints _ [] = pure []
