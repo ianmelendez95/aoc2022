@@ -60,19 +60,20 @@ soln file = do
   let input_lines = T.lines content
       (height_map, start, end) = parseMap input_lines
       answer = findShortestRoute height_map start end
-  print start
-  print end
+  -- print start
+  -- print end
   -- mapM_ print (Map.toList height_map)
 
   putStrLn $ "Answer: " <> show answer
 
 findShortestRoute :: HeightMap -> Point -> Point -> Int
 findShortestRoute heights start end = 
-  let (Just end_dist) = evalState (explore start) (HikeE heights start end (Set.singleton (0, start)) (Map.singleton start 0))
+  let (Just end_dist) = evalState (explore start) (HikeE heights start end Set.empty (Map.singleton start 0))
    in end_dist
 
 explore :: Point -> HikeS (Maybe Int)
 explore cur_point@(m, n) = do 
+  -- traceM (show cur_point)
   end_point <- use hikeEnd
   dist      <- uses hikeVisited (Map.findWithDefault (error "") cur_point)
   if cur_point == end_point
@@ -81,7 +82,7 @@ explore cur_point@(m, n) = do
       cur_height <- uses hikeHeights (Map.findWithDefault (error "") cur_point)
       neighbors  <- findExplorableNeighbors cur_height
       mapM_ (considerNeighbor (dist + 1)) neighbors
-      next_best <- snd <$> uses hikeVisitedQ Set.findMin
+      next_best  <- popBestPoint
       explore next_best
   where 
     -- | Check if neighbor is candidate for exploration,
@@ -115,6 +116,12 @@ explore cur_point@(m, n) = do
           if (neighbor_height - cur_height) > 1
             then filterTraversablePoints cur_height ps
             else (p:) <$> filterTraversablePoints cur_height ps
+
+popBestPoint :: HikeS Point
+popBestPoint = do 
+  (best, new_set) <- uses hikeVisitedQ Set.deleteFindMin
+  hikeVisitedQ .= new_set
+  pure (snd best)
 
 parseMap :: [T.Text] -> (HeightMap, Point, Point)
 parseMap lines = 
