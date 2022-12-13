@@ -40,7 +40,11 @@ import Debug.Trace
 
 type Parser = Parsec Void T.Text
 
-data Packet = PList [Packet] | PInt Int deriving Show
+data Packet = PList [Packet] | PInt Int deriving Eq
+
+instance Show Packet where 
+  show (PInt x) = show x
+  show (PList ps) = "[" <> intercalate ", " (map show ps) <> "]"
 
 shortFile :: FilePath
 shortFile = "src/Day13/short-input.txt"
@@ -56,10 +60,21 @@ soln file = do
       ordered_pairs = filter (\(_, order, _) -> order == LT || order == EQ) packet_pairs
       ordered_indexes = map (\(i, _, _) -> i) ordered_pairs
 
+      all_packets = concatMap (\(_, _, (p1, p2)) -> [p1, p2]) packet_pairs
+  
+      dividers = [PList [PList [PInt 2]], PList [PList [PInt 6]]]
+
+      sorted_packets  = zip [1..] $ sortPackets (dividers <> all_packets)
+      sorted_dividers = filter ((`elem` dividers) . snd) sorted_packets
+
       -- equal_pairs = filter (\(_, order, _) -> order == EQ) packet_pairs
   -- mapM_ print packet_pairs
   -- mapM_ print equal_pairs
-  putStrLn $ "Answer: " <> show (sum ordered_indexes)
+  -- mapM_ print sorted_dividers
+  putStrLn $ "Answer: " <> show (product . map fst $ sorted_dividers)
+
+sortPackets :: [Packet] -> [Packet]
+sortPackets = sortBy packetsOrder 
 
 packetsOrder :: Packet -> Packet -> Ordering
 packetsOrder (PInt p1)    (PInt p2)   = compare p1 p2
