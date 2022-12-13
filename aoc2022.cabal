@@ -29,6 +29,7 @@ library
       Day10.Soln
       Day11.Soln
       Day12.Soln
+      Day13.Soln
       Day2.Soln
       Day3.Soln
       Day4.Soln
@@ -48,6 +49,7 @@ library
     , containers
     , filepath
     , lens
+    , megaparsec
     , mtl
     , text
     , vector

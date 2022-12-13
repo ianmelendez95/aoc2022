@@ -42,6 +42,7 @@ library:
   - filepath
   - mtl
   - lens
+  - megaparsec
 
 executables:
   aoc2022-exe:
