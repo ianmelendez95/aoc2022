@@ -68,7 +68,10 @@ soln file = do
 
 findShortestRoute :: HeightMap -> Point -> Point -> Int
 findShortestRoute heights start end = 
-  let (Just end_dist) = evalState (explore start) (HikeE heights start end Set.empty (Map.singleton start 0))
+  let zero_heights = map fst . filter ((0 ==) . snd) . Map.toList $ heights
+      initial_visited_q = Set.fromList (zip (repeat (0 :: Int)) zero_heights)
+      initial_visited   = Map.fromList (zip zero_heights (repeat (0 :: Int)))
+      (Just end_dist) = evalState (explore start) (HikeE heights start end initial_visited_q initial_visited)
    in end_dist
 
 explore :: Point -> HikeS (Maybe Int)
