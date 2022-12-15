@@ -52,7 +52,15 @@ soln file = do
   content <- TIO.readFile file
   let input_lines = T.lines content
       segments = concatMap parseSegmentsLine input_lines
-  mapM_ print segments
+      points = concatMap segmentPoints segments
+  -- mapM_ print points
+  putStrLn $ "n points: " <> show (length points)
+
+segmentPoints :: Seg -> [Point]
+segmentPoints ((m1, n1), (m2, n2)) = [(m, n) | m <- fromTo m1 m2, n <- fromTo n1 n2]
+  where 
+    fromTo :: Int -> Int -> [Int]
+    fromTo x y = if x <= y then [x..y] else [y..x]
 
 parseSegmentsLine :: T.Text -> [Seg]
 parseSegmentsLine sline = 
