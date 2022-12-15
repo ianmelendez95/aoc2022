@@ -78,24 +78,28 @@ fillCavern walls =
 dropSand :: Point -> SandS Bool
 dropSand cur_point@(m, n) = do
   -- traceM (show cur_point)
-  lowest_m <- use sandLowest
-  if m >= lowest_m
-    then pure False
-    else do 
-      next_point_result <- findFirstPointM pointAvailable [(m + 1, n), (m + 1, n - 1), (m + 1, n + 1)]
-      case next_point_result of 
-        Nothing -> do 
-          -- traceM ("no next: " <> show cur_point)
-          sandPoints %= Set.insert cur_point
-          pure True
-        (Just next_point) -> do 
-          settled <- dropSand next_point
-          if settled 
-            then dropSand cur_point
-            else pure False
+  -- lowest_m <- use sandLowest
+  -- if m >= lowest_m
+  --   then pure False
+  --   else do 
+  next_point_result <- findFirstPointM pointAvailable [(m + 1, n), (m + 1, n - 1), (m + 1, n + 1)]
+  case next_point_result of 
+    Nothing -> do 
+      -- traceM ("no next: " <> show cur_point)
+      sandPoints %= Set.insert cur_point
+      pure True
+    (Just next_point) -> do 
+      settled <- dropSand next_point
+      if settled 
+        then dropSand cur_point
+        else pure False
   where 
     pointAvailable :: Point -> SandS Bool
-    pointAvailable point = uses sandPoints (not . Set.member point)
+    pointAvailable point = do
+      lowest_m <- use sandLowest
+      if (lowest_m + 2) <= fst point 
+        then pure False -- it's the floor!
+        else uses sandPoints (not . Set.member point)
 
 findFirstPointM :: (Point -> SandS Bool) -> [Point] -> SandS (Maybe Point)
 findFirstPointM _ [] = pure Nothing
