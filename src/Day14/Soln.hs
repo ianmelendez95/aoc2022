@@ -32,7 +32,7 @@ import System.FilePath.Posix
 import Control.Monad
 import Control.Monad.State.Lazy
 
-import Text.Megaparsec
+import Text.Megaparsec hiding (State (..))
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
@@ -40,6 +40,15 @@ import Debug.Trace
 
 type Point = (Int, Int)
 type Seg = (Point, Point)
+
+type SandS = State SandE
+
+data SandE = SandE {
+  _sandPoints :: Set Point,
+  _sandLowest :: Int
+}
+
+makeLenses ''SandE
 
 shortFile :: FilePath
 shortFile = "src/Day14/short-input.txt"
@@ -55,6 +64,44 @@ soln file = do
       points = concatMap segmentPoints segments
   -- mapM_ print points
   putStrLn $ "n points: " <> show (length points)
+  putStrLn $ "Answer: " <> show (fillCavern points)
+
+fillCavern :: [Point] -> Int
+fillCavern walls = 
+  let initial_points = Set.fromList walls
+      lowest_row = maximum $ map fst walls
+
+      sand_env = execState (dropSand (0, 500)) (SandE initial_points lowest_row)
+      sand_points = (sand_env ^. sandPoints) `Set.difference` initial_points
+   in Set.size sand_points
+
+dropSand :: Point -> SandS Bool
+dropSand cur_point@(m, n) = do
+  -- traceM (show cur_point)
+  lowest_m <- use sandLowest
+  if m >= lowest_m
+    then pure False
+    else do 
+      next_point_result <- findFirstPointM pointAvailable [(m + 1, n), (m + 1, n - 1), (m + 1, n + 1)]
+      case next_point_result of 
+        Nothing -> do 
+          -- traceM ("no next: " <> show cur_point)
+          sandPoints %= Set.insert cur_point
+          pure True
+        (Just next_point) -> do 
+          settled <- dropSand next_point
+          if settled 
+            then dropSand cur_point
+            else pure False
+  where 
+    pointAvailable :: Point -> SandS Bool
+    pointAvailable point = uses sandPoints (not . Set.member point)
+
+findFirstPointM :: (Point -> SandS Bool) -> [Point] -> SandS (Maybe Point)
+findFirstPointM _ [] = pure Nothing
+findFirstPointM f (p:ps) = do
+  b <- f p
+  if b then pure (Just p) else findFirstPointM f ps
 
 segmentPoints :: Seg -> [Point]
 segmentPoints ((m1, n1), (m2, n2)) = [(m, n) | m <- fromTo m1 m2, n <- fromTo n1 n2]
@@ -69,7 +116,7 @@ parseSegmentsLine sline =
   where 
     parsePoint :: T.Text -> Point
     parsePoint point_txt = 
-      let [m, n] = map (read . T.unpack) $ T.splitOn "," point_txt
+      let [n, m] = map (read . T.unpack) $ T.splitOn "," point_txt
        in (m, n)
 
     takeSegments :: [Point] -> [Seg]
