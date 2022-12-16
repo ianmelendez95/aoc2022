@@ -54,6 +54,7 @@ makeLenses ''SandE
 shortFile :: (FilePath, Int)
 shortFile = ("src/Day15/short-input.txt", 10)
 
+-- 5228215 too high
 fullFile :: (FilePath, Int)
 fullFile = ("src/Day15/full-input.txt", 1000000)
 
