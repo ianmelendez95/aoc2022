@@ -40,6 +40,7 @@ import Debug.Trace
 
 type Point = (Int, Int)
 type Seg = (Point, Point)
+type Sensor = (Point, Point)
 
 type SandS = State SandE
 
@@ -50,18 +51,37 @@ data SandE = SandE {
 
 makeLenses ''SandE
 
-shortFile :: FilePath
-shortFile = "src/Day15/short-input.txt"
+shortFile :: (FilePath, Int)
+shortFile = ("src/Day15/short-input.txt", 10)
 
-fullFile :: FilePath
-fullFile = "src/Day15/full-input.txt"
+fullFile :: (FilePath, Int)
+fullFile = ("src/Day15/full-input.txt", 1000000)
 
-soln :: FilePath -> IO ()
-soln file = do
+soln :: (FilePath, Int) -> IO ()
+soln (file, y) = do
   content <- TIO.readFile file
   let input_lines = T.lines content
-      sensor_beacons = map parseSensorLine input_lines
-  mapM_ print sensor_beacons
+      sensors = map parseSensorLine input_lines
+      y_beacons = map fst . filter ((y ==) . snd) . map snd $ sensors
+      y_covered = foldl' Set.union Set.empty (map (sensorLineRange y) sensors)
+      y_no_beacon = y_covered `Set.difference` Set.fromList y_beacons
+  -- mapM_ (\s -> print (s, sensorLineRange y s)) sensors
+  -- putStrLn $ "No Beacons: " <> show y_no_beacon
+  putStrLn $ "Answer: "     <> show (Set.size y_no_beacon)
+
+sensorLineRange :: Int -> Sensor -> Set Int
+sensorLineRange y sensor@((s_x, s_y), _) = 
+  let s_range = sensorRange sensor
+      leftover_range = s_range - abs (s_y - y)
+      x_start = s_x - leftover_range
+      x_end   = s_x + leftover_range
+   in Set.fromList [x_start..x_end]
+
+sensorRange :: Sensor -> Int
+sensorRange (s, b) = pointDistance s b
+
+pointDistance :: Point -> Point -> Int
+pointDistance (x1, y1) (x2, y2) = abs (x1 - x2) + abs (y1 - y2)
 
 parseSensorLine :: T.Text -> (Point, Point)
 parseSensorLine s_line = 
