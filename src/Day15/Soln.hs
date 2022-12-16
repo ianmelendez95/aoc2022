@@ -1,0 +1,78 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
+
+module Day15.Soln where
+
+import Control.Lens
+
+import qualified Data.Text as T
+import qualified Data.Text.IO as TIO
+
+import Data.Void
+import Data.List
+import Data.Maybe
+import Data.Char
+import Data.Ord
+
+import Data.Set (Set)
+import qualified Data.Set as Set
+
+import Data.IntMap (IntMap)
+import qualified Data.IntMap as IntMap
+
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+
+import Data.Vector.Mutable (IOVector)
+import qualified Data.Vector.Mutable as Vec
+
+import System.FilePath.Posix
+
+import Control.Monad
+import Control.Monad.State.Lazy
+
+import Text.Megaparsec hiding (State (..))
+import Text.Megaparsec.Char
+import qualified Text.Megaparsec.Char.Lexer as L
+
+import Debug.Trace
+
+type Point = (Int, Int)
+type Seg = (Point, Point)
+
+type SandS = State SandE
+
+data SandE = SandE {
+  _sandPoints :: Set Point,
+  _sandLowest :: Int
+}
+
+makeLenses ''SandE
+
+shortFile :: FilePath
+shortFile = "src/Day15/short-input.txt"
+
+fullFile :: FilePath
+fullFile = "src/Day15/full-input.txt"
+
+soln :: FilePath -> IO ()
+soln file = do
+  content <- TIO.readFile file
+  let input_lines = T.lines content
+      sensor_beacons = map parseSensorLine input_lines
+  mapM_ print sensor_beacons
+
+parseSensorLine :: T.Text -> (Point, Point)
+parseSensorLine s_line = 
+  let s_words = T.words s_line
+      s_x = parseCoord . T.init $ s_words !! 2
+      s_y = parseCoord . T.init $ s_words !! 3
+      b_x = parseCoord . T.init $ s_words !! 8
+      b_y = parseCoord          $ s_words !! 9
+    in ((s_x, s_y), (b_x, b_y))
+  where
+    parseCoord :: T.Text -> Int
+    parseCoord c_word = 
+      let [_, val] = T.splitOn "=" c_word
+       in read . T.unpack $ val
