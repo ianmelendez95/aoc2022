@@ -9,6 +9,7 @@ import Control.Lens
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 
+import Data.Functor
 import Data.Void
 import Data.List
 import Data.Maybe
@@ -63,20 +64,36 @@ soln (file, y) = do
   content <- TIO.readFile file
   let input_lines = T.lines content
       sensors = map parseSensorLine input_lines
-      y_beacons = map fst . filter ((y ==) . snd) . map snd $ sensors
-      y_covered = foldl' Set.union Set.empty (map (sensorLineRange y) sensors)
-      y_no_beacon = y_covered `Set.difference` Set.fromList y_beacons
+      -- y_beacons = map fst . filter ((y ==) . snd) . map snd $ sensors
+      -- y_covered = foldl' Set.union Set.empty (map (sensorLineRange y) sensors)
+      y_covered = foldMap sensorCoverage sensors
+      -- y_no_beacon = y_covered `Set.difference` Set.fromList y_beacons
   -- mapM_ (\s -> print (s, sensorLineRange y s)) sensors
   -- putStrLn $ "No Beacons: " <> show y_no_beacon
-  putStrLn $ "Answer: "     <> show (Set.size y_no_beacon)
+  putStrLn $ "All Points Count: " <> show (Set.size y_covered)
+  -- putStrLn $ "Answer: "     <> show (Set.size y_no_beacon)
 
-sensorLineRange :: Int -> Sensor -> Set Int
-sensorLineRange y sensor@((s_x, s_y), _) = 
+sensorCoverage :: Sensor -> Set Point
+sensorCoverage sensor@((s_x, s_y), (_, _)) = 
   let s_range = sensorRange sensor
-      leftover_range = s_range - abs (s_y - y)
-      x_start = s_x - leftover_range
-      x_end   = s_x + leftover_range
-   in Set.fromList [x_start..x_end]
+   in foldMap coverageForY [(s_y - s_range)..(s_y + s_range)]
+  where 
+    coverageForY :: Int -> Set Point
+    coverageForY y = 
+      let leftover_range = sensor_range - abs (s_y - y)
+          x_start = s_x - leftover_range
+          x_end   = s_x + leftover_range
+       in Set.fromList (map (,y) [x_start..x_end])
+
+    sensor_range = sensorRange sensor
+
+-- sensorLineRange :: Int -> Sensor -> Set Int
+-- sensorLineRange y sensor@((s_x, s_y), _) = 
+--   let s_range = sensorRange sensor
+--       leftover_range = s_range - abs (s_y - y)
+--       x_start = s_x - leftover_range
+--       x_end   = s_x + leftover_range
+--    in Set.fromList [x_start..x_end]
 
 sensorRange :: Sensor -> Int
 sensorRange (s, b) = pointDistance s b
