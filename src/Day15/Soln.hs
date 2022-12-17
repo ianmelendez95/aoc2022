@@ -71,6 +71,7 @@ soln (file, bounds@(d_min, d_max)) = do
       -- y_beacons = map fst . filter ((y ==) . snd) . map snd $ sensors
       -- y_covered = foldl' Set.union Set.empty (map (sensorLineRange y) sensors)
       boundaries = map (\s -> (s, sensorBoundary s)) sensors
+      colinear_pairs = pairColinear (concatMap snd boundaries)
       -- first_sensor = head sensors
       -- y_no_beacon = y_covered `Set.difference` Set.fromList y_beacons
       -- all_y = Set.fromList [(x, y) | x <- [d_min..d_max], y <- [d_min..d_max]]
@@ -83,11 +84,42 @@ soln (file, bounds@(d_min, d_max)) = do
   -- putStrLn $ "First Sensor: " <> show first_sensor
   -- putStrLn $ "First Range: " <> show (sensorRange first_sensor)
   -- putStrLn $ "First Boundary Count: " <> show (Set.size $ sensorBoundary bounds first_sensor)
-  mapM_ printBoundary boundaries
+  -- mapM_ printBoundary boundaries
+  mapM_ print colinear_pairs
   where 
     printBoundary b = do 
       print (fst b)
       mapM_ print (snd b)
+
+pairColinear :: [Seg] -> [(Seg, Seg)]
+pairColinear all_segs = 
+  let pos = filter segPos all_segs
+      neg = filter (not . segPos) all_segs
+
+      pos_col = groupColinear pos
+      neg_col = groupColinear neg
+
+      -- col2 = colinear AND colliding (col^2)
+      pos_col2 = concatMap colinearCollidingPairs pos_col 
+      neg_col2 = concatMap colinearCollidingPairs neg_col
+
+   in pos_col2 <> neg_col2
+  where 
+    colinearCollidingPairs :: [Seg] -> [(Seg, Seg)]
+    colinearCollidingPairs = pairsBy sortedColinearCollide . sortOn segStart
+
+    sortedColinearCollide :: Seg -> Seg -> Bool
+    sortedColinearCollide s1 s2 = segStart s2 <= segEnd s1
+    
+    groupColinear :: [Seg] -> [[Seg]]
+    groupColinear = groupBy (grouping segYInt) . sortOn segYInt
+
+grouping :: Eq b => (a -> b) -> a -> a -> Bool
+grouping f x y = f x == f y
+
+pairsBy :: (a -> a -> Bool) -> [a] -> [(a, a)]
+pairsBy f (x:y:xs) = if f x y then (x,y) : pairsBy f (y:xs) else pairsBy f (y:xs)
+pairsBy _ _ = []
 
 sensorBoundary :: Sensor -> [Seg]
 sensorBoundary sensor@((s_x, s_y), (_, _)) = 
