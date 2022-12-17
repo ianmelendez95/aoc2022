@@ -56,7 +56,7 @@ shortFile = ("src/Day15/short-input.txt", 10)
 
 -- 5228215 too high
 fullFile :: (FilePath, Int)
-fullFile = ("src/Day15/full-input.txt", 1000000)
+fullFile = ("src/Day15/full-input.txt", 2000000)
 
 soln :: (FilePath, Int) -> IO ()
 soln (file, y) = do
