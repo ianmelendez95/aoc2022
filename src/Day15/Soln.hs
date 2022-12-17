@@ -72,13 +72,19 @@ soln (file, bounds@(d_min, d_max)) = do
       sensors = map parseSensorLine input_lines
       -- y_beacons = map fst . filter ((y ==) . snd) . map snd $ sensors
       -- y_covered = foldl' Set.union Set.empty (map (sensorLineRange y) sensors)
-      boundaries = foldMap (sensorBoundary bounds) sensors
+      boundaries = map (sensorBoundary bounds) (take 5 sensors)
+      -- first_sensor = head sensors
       -- y_no_beacon = y_covered `Set.difference` Set.fromList y_beacons
       -- all_y = Set.fromList [(x, y) | x <- [d_min..d_max], y <- [d_min..d_max]]
   -- mapM_ (\s -> print (s, sensorLineRange y s)) sensors
   -- putStrLn $ "No Beacons: " <> show y_no_beacon
-  putStrLn $ "All Points Count: " <> show (Set.size boundaries)
+  -- putStrLn $ "All Points Count: " <> show (Set.size boundaries)
+  mapM_ (print . Set.size) boundaries
+  mapM_ (print . Set.size) boundaries
   -- putStrLn $ "Answer: "     <> show (Set.size y_no_beacon)
+  -- putStrLn $ "First Sensor: " <> show first_sensor
+  -- putStrLn $ "First Range: " <> show (sensorRange first_sensor)
+  -- putStrLn $ "First Boundary Count: " <> show (Set.size $ sensorBoundary bounds first_sensor)
 
 sensorBoundary :: Bounds -> Sensor -> Set Point
 sensorBoundary bounds@(d_min, d_max) sensor@((s_x, s_y), (_, _)) = 
