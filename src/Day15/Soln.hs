@@ -40,18 +40,16 @@ import qualified Text.Megaparsec.Char.Lexer as L
 import Debug.Trace
 
 type Point = (Int, Int)
-type Seg = (Point, Point)
 type Bounds = (Int, Int)
 type Sensor = (Point, Point)
+type Boundary = [Seg]
 
-type SandS = State SandE
-
-data SandE = SandE {
-  _sandPoints :: Set Point,
-  _sandLowest :: Int
-}
-
-makeLenses ''SandE
+data Seg = Seg {
+  segStart :: Point,
+  segEnd   :: Point,
+  segPos   :: Bool,
+  segYInt  :: Int
+} deriving Show
 
 -- shortFile :: (FilePath, Int)
 -- shortFile = ("src/Day15/short-input.txt", 10)
@@ -72,35 +70,39 @@ soln (file, bounds@(d_min, d_max)) = do
       sensors = map parseSensorLine input_lines
       -- y_beacons = map fst . filter ((y ==) . snd) . map snd $ sensors
       -- y_covered = foldl' Set.union Set.empty (map (sensorLineRange y) sensors)
-      boundaries = map (sensorBoundary bounds) (take 5 sensors)
+      boundaries = map (\s -> (s, sensorBoundary s)) sensors
       -- first_sensor = head sensors
       -- y_no_beacon = y_covered `Set.difference` Set.fromList y_beacons
       -- all_y = Set.fromList [(x, y) | x <- [d_min..d_max], y <- [d_min..d_max]]
   -- mapM_ (\s -> print (s, sensorLineRange y s)) sensors
   -- putStrLn $ "No Beacons: " <> show y_no_beacon
   -- putStrLn $ "All Points Count: " <> show (Set.size boundaries)
-  mapM_ (print . Set.size) boundaries
-  mapM_ (print . Set.size) boundaries
+  -- mapM_ (print . Set.size) boundaries
+  -- mapM_ (print . Set.size) boundaries
   -- putStrLn $ "Answer: "     <> show (Set.size y_no_beacon)
   -- putStrLn $ "First Sensor: " <> show first_sensor
   -- putStrLn $ "First Range: " <> show (sensorRange first_sensor)
   -- putStrLn $ "First Boundary Count: " <> show (Set.size $ sensorBoundary bounds first_sensor)
-
-sensorBoundary :: Bounds -> Sensor -> Set Point
-sensorBoundary bounds@(d_min, d_max) sensor@((s_x, s_y), (_, _)) = 
-  let s_range = sensorRange sensor
-      y_min = (s_y - s_range) - 1
-      y_max = (s_y + s_range) + 1
-   in foldMap boundaryForY [y_min..y_max]
+  mapM_ printBoundary boundaries
   where 
-    boundaryForY :: Int -> Set Point
-    boundaryForY y = 
-      let leftover_range = sensor_range - abs (s_y - y)
-          x_start = s_x - (leftover_range + 1)
-          x_end   = s_x + (leftover_range + 1)
-       in Set.fromList (filter (inBounds bounds) [(x_start, y), (x_end, y)])
+    printBoundary b = do 
+      print (fst b)
+      mapM_ print (snd b)
 
-    sensor_range = sensorRange sensor
+sensorBoundary :: Sensor -> [Seg]
+sensorBoundary sensor@((s_x, s_y), (_, _)) = 
+  let s_range = sensorRange sensor
+      left    = (s_x - s_range - 1, s_y)
+      top     = (s_x, s_y - s_range - 1)
+      right   = (s_x + s_range + 1, s_y)
+      bottom  = (s_x, s_y + s_range + 1)
+   in map (uncurry segmentFromPoints) [(left, top), (left, bottom), (top, right), (bottom, right)]
+  
+segmentFromPoints :: Point -> Point -> Seg
+segmentFromPoints p1@(x1, y1) p2@(x2, y2) = 
+  let slope = (y2 - y1) `div` (x2 - x1)
+      y_int = y1 - (slope * x1)
+   in Seg { segStart = min p1 p2, segEnd = max p1 p2, segPos = slope > 0, segYInt = y_int }
 
 inBounds :: Bounds -> Point -> Bool
 inBounds (d_min, d_max) (x, y) = x >= d_min && x <= d_max && y >= d_min && y <= d_max
