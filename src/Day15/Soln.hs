@@ -41,6 +41,7 @@ import Debug.Trace
 
 type Point = (Int, Int)
 type Seg = (Point, Point)
+type Bounds = (Int, Int)
 type Sensor = (Point, Point)
 
 type SandS = State SandE
@@ -52,38 +53,45 @@ data SandE = SandE {
 
 makeLenses ''SandE
 
-shortFile :: (FilePath, Int)
-shortFile = ("src/Day15/short-input.txt", 10)
+-- shortFile :: (FilePath, Int)
+-- shortFile = ("src/Day15/short-input.txt", 10)
+shortFile :: (FilePath, Bounds)
+shortFile = ("src/Day15/short-input.txt", (0, 20))
 
--- 5228215 too high
-fullFile :: (FilePath, Int)
-fullFile = ("src/Day15/full-input.txt", 2000000)
+-- fullFile :: (FilePath, Int)
+-- fullFile = ("src/Day15/full-input.txt", 2000000)
+fullFile :: (FilePath, Bounds)
+fullFile = ("src/Day15/full-input.txt", (0, 4000000))
 
-soln :: (FilePath, Int) -> IO ()
-soln (file, y) = do
+-- soln :: (FilePath, Int) -> IO ()
+-- soln (file, y) = do
+soln :: (FilePath, Bounds) -> IO ()
+soln (file, bounds) = do
   content <- TIO.readFile file
   let input_lines = T.lines content
       sensors = map parseSensorLine input_lines
       -- y_beacons = map fst . filter ((y ==) . snd) . map snd $ sensors
       -- y_covered = foldl' Set.union Set.empty (map (sensorLineRange y) sensors)
-      y_covered = foldMap sensorCoverage sensors
+      y_covered = foldMap (sensorCoverage bounds) sensors
       -- y_no_beacon = y_covered `Set.difference` Set.fromList y_beacons
   -- mapM_ (\s -> print (s, sensorLineRange y s)) sensors
   -- putStrLn $ "No Beacons: " <> show y_no_beacon
   putStrLn $ "All Points Count: " <> show (Set.size y_covered)
   -- putStrLn $ "Answer: "     <> show (Set.size y_no_beacon)
 
-sensorCoverage :: Sensor -> Set Point
-sensorCoverage sensor@((s_x, s_y), (_, _)) = 
+sensorCoverage :: Bounds -> Sensor -> Set Point
+sensorCoverage (d_min, d_max) sensor@((s_x, s_y), (_, _)) = 
   let s_range = sensorRange sensor
-   in foldMap coverageForY [(s_y - s_range)..(s_y + s_range)]
+      y_min = s_y - s_range
+      y_max = s_y + s_range
+   in foldMap coverageForY [(min d_min y_min)..(max d_max y_max)]
   where 
     coverageForY :: Int -> Set Point
     coverageForY y = 
       let leftover_range = sensor_range - abs (s_y - y)
           x_start = s_x - leftover_range
           x_end   = s_x + leftover_range
-       in Set.fromList (map (,y) [x_start..x_end])
+       in Set.fromList (map (,y) [(min x_start d_min)..(max x_end d_max)])
 
     sensor_range = sensorRange sensor
 
