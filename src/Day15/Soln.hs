@@ -44,6 +44,8 @@ type Bounds = (Int, Int)
 type Sensor = (Point, Point)
 type Boundary = [Seg]
 
+type ColPair = (Seg,(Seg,Seg))  -- (intersect,(seg1,seg2))
+
 data Seg = Seg {
   segStart :: Point,
   segEnd   :: Point,
@@ -85,6 +87,8 @@ soln (file, bounds@(d_min, d_max)) = do
       pos_col_inc = pairParallelByIncidentColinear pos_segs
       neg_col_inc = pairParallelByIncidentColinear neg_segs
 
+      int_cols = findIntersectingColinearPairs pos_col_inc neg_col_inc
+
       -- first_sensor = head sensors
       -- y_no_beacon = y_covered `Set.difference` Set.fromList y_beacons
       -- all_y = Set.fromList [(x, y) | x <- [d_min..d_max], y <- [d_min..d_max]]
@@ -99,7 +103,13 @@ soln (file, bounds@(d_min, d_max)) = do
   -- putStrLn $ "First Boundary Count: " <> show (Set.size $ sensorBoundary bounds first_sensor)
   -- mapM_ printBoundary boundaries
   mapM_ print (pos_col_inc <> neg_col_inc)
+
+  putStrLn "[Intersecting Colinear Pairs]"
+  mapM_ (putStrLn . showIntersecting) int_cols
   where 
+    showIntersecting :: (Point,ColPair,ColPair) -> String
+    showIntersecting (i, p1, p2) = show i <> ": "<> show (fst p1) <> " <> " <> show (fst p2)
+
     printBoundary b = do 
       print (fst b)
       mapM_ print (snd b)
@@ -111,17 +121,31 @@ soln (file, bounds@(d_min, d_max)) = do
 
 --    in pairParallelColinear pos <> pairParallelColinear neg
 
-perpendicularSegmentsIntersect :: Seg -> Seg -> Bool
-perpendicularSegmentsIntersect s_pos s_neg = 
+findIntersectingColinearPairs :: [ColPair] -> [ColPair] -> [(Point,ColPair,ColPair)]
+findIntersectingColinearPairs [] _ = []
+findIntersectingColinearPairs (p:pos_pairs) neg_pairs = 
+  let int_points = mapMaybe (forTwo p) neg_pairs
+   in int_points <> findIntersectingColinearPairs pos_pairs neg_pairs
+  where 
+    forTwo :: ColPair -> ColPair -> Maybe (Point,ColPair,ColPair)
+    forTwo pos neg = 
+      case perpendicularSegmentsIntersection (fst pos) (fst neg) of 
+        Nothing -> Nothing
+        (Just int_point) -> Just (int_point, pos, neg)
+
+perpendicularSegmentsIntersection :: Seg -> Seg -> Maybe Point
+perpendicularSegmentsIntersection s_pos s_neg = 
   let pos_y_int = segYInt s_pos
       neg_y_int = segYInt s_neg
       y_int_diff = neg_y_int - pos_y_int
    in if odd y_int_diff
-        then False -- cannot intersect, they "pass through" each other
+        then Nothing -- cannot intersect, they "pass through" each other
         else let x_int = y_int_diff `div` 2
                  y_int = x_int + pos_y_int
                  int = (x_int, y_int)
-              in containsPoint s_pos int && containsPoint s_neg int 
+              in if containsPoint s_pos int && containsPoint s_neg int 
+                   then Just int
+                   else Nothing
   where 
     containsPoint :: Seg -> Point -> Bool 
     containsPoint s p = p > segStart s && p < segEnd s
