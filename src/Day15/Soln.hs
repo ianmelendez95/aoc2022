@@ -111,6 +111,21 @@ soln (file, bounds@(d_min, d_max)) = do
 
 --    in pairParallelColinear pos <> pairParallelColinear neg
 
+perpendicularSegmentsIntersect :: Seg -> Seg -> Bool
+perpendicularSegmentsIntersect s_pos s_neg = 
+  let pos_y_int = segYInt s_pos
+      neg_y_int = segYInt s_neg
+      y_int_diff = neg_y_int - pos_y_int
+   in if odd y_int_diff
+        then False -- cannot intersect, they "pass through" each other
+        else let x_int = y_int_diff `div` 2
+                 y_int = x_int + pos_y_int
+                 int = (x_int, y_int)
+              in containsPoint s_pos int && containsPoint s_neg int 
+  where 
+    containsPoint :: Seg -> Point -> Bool 
+    containsPoint s p = p > segStart s && p < segEnd s
+
 -- | given parallel segments, pair up colinear, incident lines
 pairParallelByIncidentColinear :: [Seg] -> [(Seg, (Seg, Seg))]
 pairParallelByIncidentColinear parallel_segs = 
