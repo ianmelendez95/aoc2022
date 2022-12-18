@@ -88,6 +88,10 @@ soln (file, bounds@(d_min, d_max)) = do
       neg_col_inc = pairParallelByIncidentColinear neg_segs
 
       int_cols = findIntersectingColinearPairs pos_col_inc neg_col_inc
+      int_points = map (^. _1) int_cols
+
+      unseen_points = filter (not . (`pointInSensors` sensors)) int_points
+      unseen_in_bounds = filter (inBounds bounds) unseen_points
 
       -- first_sensor = head sensors
       -- y_no_beacon = y_covered `Set.difference` Set.fromList y_beacons
@@ -105,7 +109,9 @@ soln (file, bounds@(d_min, d_max)) = do
   mapM_ print (pos_col_inc <> neg_col_inc)
 
   putStrLn "[Intersecting Colinear Pairs]"
-  mapM_ (putStrLn . showIntersecting) int_cols
+  -- mapM_ print int_points
+  mapM_ print unseen_in_bounds
+  -- mapM_ (putStrLn . showIntersecting) int_cols
   where 
     showIntersecting :: (Point,ColPair,ColPair) -> String
     showIntersecting (i, p1, p2) = show i <> ": "<> show (fst p1) <> " <> " <> show (fst p2)
@@ -120,6 +126,15 @@ soln (file, bounds@(d_min, d_max)) = do
 --       neg = filter (not . segPos) all_segs
 
 --    in pairParallelColinear pos <> pairParallelColinear neg
+
+pointInSensors :: Point -> [Sensor] -> Bool
+pointInSensors p = none (pointInSensor p)
+
+pointInSensor :: Point -> Sensor -> Bool
+pointInSensor p s = 
+  let s_range = sensorRange s
+      s_point = fst s
+   in pointDistance p s_point <= s_range
 
 findIntersectingColinearPairs :: [ColPair] -> [ColPair] -> [(Point,ColPair,ColPair)]
 findIntersectingColinearPairs [] _ = []
