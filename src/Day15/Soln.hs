@@ -109,10 +109,11 @@ soln (file, bounds@(d_min, d_max)) = do
   mapM_ print (pos_col_inc <> neg_col_inc)
 
   putStrLn "[Intersecting Colinear Pairs]"
-  -- mapM_ print int_points
-  mapM_ print unseen_in_bounds
-  -- mapM_ (putStrLn . showIntersecting) int_cols
+  mapM_ (putStrLn . showResult) unseen_in_bounds
   where 
+    showResult :: Point -> String
+    showResult p@(x,y) = show p <> ": " <> show (x * 4000000 + y)
+
     showIntersecting :: (Point,ColPair,ColPair) -> String
     showIntersecting (i, p1, p2) = show i <> ": "<> show (fst p1) <> " <> " <> show (fst p2)
 
@@ -128,7 +129,7 @@ soln (file, bounds@(d_min, d_max)) = do
 --    in pairParallelColinear pos <> pairParallelColinear neg
 
 pointInSensors :: Point -> [Sensor] -> Bool
-pointInSensors p = none (pointInSensor p)
+pointInSensors p = any (pointInSensor p)
 
 pointInSensor :: Point -> Sensor -> Bool
 pointInSensor p s = 
