@@ -71,7 +71,14 @@ soln (file, bounds@(d_min, d_max)) = do
       -- y_beacons = map fst . filter ((y ==) . snd) . map snd $ sensors
       -- y_covered = foldl' Set.union Set.empty (map (sensorLineRange y) sensors)
       boundaries = map (\s -> (s, sensorBoundary s)) sensors
-      colinear_pairs = pairColinear (concatMap snd boundaries)
+
+      all_segs = concatMap snd boundaries
+      pos_segs = filter segPos all_segs
+      neg_segs = filter (not . segPos) all_segs
+
+      pos_col_inc = pairParallelColinear pos_segs
+      neg_col_inc = pairParallelColinear neg_segs
+
       -- first_sensor = head sensors
       -- y_no_beacon = y_covered `Set.difference` Set.fromList y_beacons
       -- all_y = Set.fromList [(x, y) | x <- [d_min..d_max], y <- [d_min..d_max]]
@@ -85,25 +92,24 @@ soln (file, bounds@(d_min, d_max)) = do
   -- putStrLn $ "First Range: " <> show (sensorRange first_sensor)
   -- putStrLn $ "First Boundary Count: " <> show (Set.size $ sensorBoundary bounds first_sensor)
   -- mapM_ printBoundary boundaries
-  mapM_ print colinear_pairs
+  mapM_ print (pos_col_inc <> neg_col_inc)
   where 
     printBoundary b = do 
       print (fst b)
       mapM_ print (snd b)
 
-pairColinear :: [Seg] -> [(Seg, Seg)]
-pairColinear all_segs = 
-  let pos = filter segPos all_segs
-      neg = filter (not . segPos) all_segs
+-- pairColinear :: [Seg] -> [(Seg, Seg)]
+-- pairColinear all_segs = 
+--   let pos = filter segPos all_segs
+--       neg = filter (not . segPos) all_segs
 
-      pos_col = groupColinear pos
-      neg_col = groupColinear neg
+--    in pairParallelColinear pos <> pairParallelColinear neg
 
-      -- col2 = colinear AND colliding (col^2)
-      pos_col2 = concatMap colinearCollidingPairs pos_col 
-      neg_col2 = concatMap colinearCollidingPairs neg_col
-
-   in pos_col2 <> neg_col2
+-- | given parallel segments, pair up colinear, incident lines
+pairParallelColinear :: [Seg] -> [(Seg, Seg)]
+pairParallelColinear parallel_segs = 
+  let col = groupColinear parallel_segs
+   in concatMap colinearCollidingPairs col
   where 
     colinearCollidingPairs :: [Seg] -> [(Seg, Seg)]
     colinearCollidingPairs = pairsBy sortedColinearCollide . sortOn segStart
