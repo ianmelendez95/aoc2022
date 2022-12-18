@@ -49,7 +49,13 @@ data Seg = Seg {
   segEnd   :: Point,
   segPos   :: Bool,
   segYInt  :: Int
-} deriving Show
+} 
+
+instance Show Seg where 
+  show = showSegPoints
+
+showSegPoints :: Seg -> String
+showSegPoints s = "[[" <> show (segStart s) <> " -> " <> show (segEnd s) <> "]]"
 
 -- shortFile :: (FilePath, Int)
 -- shortFile = ("src/Day15/short-input.txt", 10)
@@ -76,8 +82,8 @@ soln (file, bounds@(d_min, d_max)) = do
       pos_segs = filter segPos all_segs
       neg_segs = filter (not . segPos) all_segs
 
-      pos_col_inc = pairParallelColinear pos_segs
-      neg_col_inc = pairParallelColinear neg_segs
+      pos_col_inc = pairParallelByIncidentColinear pos_segs
+      neg_col_inc = pairParallelByIncidentColinear neg_segs
 
       -- first_sensor = head sensors
       -- y_no_beacon = y_covered `Set.difference` Set.fromList y_beacons
@@ -106,19 +112,27 @@ soln (file, bounds@(d_min, d_max)) = do
 --    in pairParallelColinear pos <> pairParallelColinear neg
 
 -- | given parallel segments, pair up colinear, incident lines
-pairParallelColinear :: [Seg] -> [(Seg, Seg)]
-pairParallelColinear parallel_segs = 
+pairParallelByIncidentColinear :: [Seg] -> [(Seg, (Seg, Seg))]
+pairParallelByIncidentColinear parallel_segs = 
   let col = groupColinear parallel_segs
    in concatMap colinearCollidingPairs col
   where 
-    colinearCollidingPairs :: [Seg] -> [(Seg, Seg)]
-    colinearCollidingPairs = pairsBy sortedColinearCollide . sortOn segStart
+    colinearCollidingPairs :: [Seg] -> [(Seg, (Seg, Seg))]
+    colinearCollidingPairs = map (pairResult colinearCollidingIntersect) . pairsBy sortedColinearCollide . sortOn segStart
+
+    colinearCollidingIntersect :: (Seg, Seg) -> Seg
+    colinearCollidingIntersect (s1, s2) = 
+      let [_, i1, i2, _] = sort [segStart s1, segEnd s1, segStart s2, segEnd s2]
+       in segmentFromPoints i1 i2
 
     sortedColinearCollide :: Seg -> Seg -> Bool
     sortedColinearCollide s1 s2 = segStart s2 <= segEnd s1
     
     groupColinear :: [Seg] -> [[Seg]]
     groupColinear = groupBy (grouping segYInt) . sortOn segYInt
+
+pairResult :: (a -> b) -> a -> (b, a)
+pairResult f x = (f x, x)
 
 grouping :: Eq b => (a -> b) -> a -> a -> Bool
 grouping f x y = f x == f y
