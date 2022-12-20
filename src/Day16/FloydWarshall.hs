@@ -18,6 +18,8 @@ import Control.Lens
 import Data.Set (Set)
 import qualified Data.Set as Set
 
+import Debug.Trace
+
 type Edge = (Int, Int)
 
 type EdgeWeights = Map Edge Int
@@ -40,7 +42,7 @@ findShortestPaths weights =
     findShortest = mapM_ (\k -> mapM_ (findShortestForEdge k) edge_combs) vertices
 
     self_dists :: Map Edge Int
-    self_dists = Map.fromList (zip (zip vertices vertices) [0..])
+    self_dists = Map.fromList (zip (zip vertices vertices) (repeat 0))
 
     edge_combs :: [Edge]
     edge_combs = [(i, j) | i <- vertices, j <- vertices]
