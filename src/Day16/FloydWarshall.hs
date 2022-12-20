@@ -1,16 +1,38 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TupleSections #-}
+
 module Day16.FloydWarshall where 
 
-data Edge = Edge {
-  edgeStart  :: Int,
-  edgeEnd    :: Int,
-  edgeWeight :: Int
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+
+import Control.Monad
+import Control.Monad.State.Lazy
+
+import Control.Lens
+
+type Edge = (Int, Int)
+
+type EdgeWeights = Map Edge Int
+
+type PathS = State PathE
+
+data PathE = PathE {
+  _pathEdges    :: EdgeWeights,
+  _pathShortest :: Map Edge Int
 }
 
-test_edges :: [Edge]
-test_edges = 
-  [ Edge 2 1 4
-  , Edge 2 3 3
-  , Edge 1 3 (-2)
-  , Edge 3 4 2
-  , Edge 4 2 (-1)
+makeLenses ''PathE
+
+findShortestPaths :: EdgeWeights -> Map Edge Int
+findShortestPaths = _
+
+test_edges :: EdgeWeights
+test_edges = Map.fromList
+  [ ((2, 1), 4)
+  , ((2, 3), 3)
+  , ((1, 3), (-2))
+  , ((3, 4), 2)
+  , ((4, 2), (-1))
   ]
