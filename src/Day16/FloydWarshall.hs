@@ -4,6 +4,9 @@
 
 module Day16.FloydWarshall where 
 
+import Data.List
+import Data.Maybe
+
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
@@ -14,8 +17,6 @@ import Control.Lens
 
 import Data.Set (Set)
 import qualified Data.Set as Set
-
-import Data.List
 
 type Edge = (Int, Int)
 
@@ -36,16 +37,28 @@ findShortestPaths weights =
    in (execState findShortest path_env) ^. pathDists
   where 
     findShortest :: PathS ()
-    findShortest = mapM_ findShortestForK vertices
+    findShortest = mapM_ (\k -> mapM_ (findShortestForEdge k) edge_combs) vertices
 
     self_dists :: Map Edge Int
     self_dists = Map.fromList (zip (zip vertices vertices) [0..])
 
+    edge_combs :: [Edge]
+    edge_combs = [(i, j) | i <- vertices, j <- vertices]
+
     vertices :: [Int]
     vertices = nub . concatMap ((\(x, y) -> [x, y]) . fst) $ Map.toList weights
 
-findShortestForK :: Int -> PathS ()
-findShortestForK k = _
+findShortestForEdge :: Int -> Edge -> PathS ()
+findShortestForEdge k (i, j) = do 
+  mdist_ik <- getDistance (i, k)
+  mdist_kj <- getDistance (k, j)
+  case (mdist_ik, mdist_kj) of 
+    (Just dist_ik, Just dist_kj) -> 
+      pathDists %= Map.insertWith min (i, j) (dist_ik + dist_kj)
+    _ -> pure ()
+
+getDistance :: Edge -> PathS (Maybe Int)
+getDistance edge = uses pathDists (Map.lookup edge)
 
 test_edges :: EdgeWeights
 test_edges = Map.fromList
