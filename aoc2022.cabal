@@ -32,6 +32,7 @@ library
       Day13.Soln
       Day14.Soln
       Day15.Soln
+      Day16.FloydWarshall
       Day16.Soln
       Day2.Soln
       Day3.Soln
