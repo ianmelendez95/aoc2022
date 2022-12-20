@@ -12,6 +12,11 @@ import Control.Monad.State.Lazy
 
 import Control.Lens
 
+import Data.Set (Set)
+import qualified Data.Set as Set
+
+import Data.List
+
 type Edge = (Int, Int)
 
 type EdgeWeights = Map Edge Int
@@ -19,14 +24,28 @@ type EdgeWeights = Map Edge Int
 type PathS = State PathE
 
 data PathE = PathE {
-  _pathEdges    :: EdgeWeights,
-  _pathShortest :: Map Edge Int
+  _pathEdges :: EdgeWeights,
+  _pathDists :: Map Edge Int
 }
 
 makeLenses ''PathE
 
 findShortestPaths :: EdgeWeights -> Map Edge Int
-findShortestPaths = _
+findShortestPaths weights = 
+  let path_env = PathE { _pathEdges = weights, _pathDists = weights <> self_dists }
+   in (execState findShortest path_env) ^. pathDists
+  where 
+    findShortest :: PathS ()
+    findShortest = mapM_ findShortestForK vertices
+
+    self_dists :: Map Edge Int
+    self_dists = Map.fromList (zip (zip vertices vertices) [0..])
+
+    vertices :: [Int]
+    vertices = nub . concatMap ((\(x, y) -> [x, y]) . fst) $ Map.toList weights
+
+findShortestForK :: Int -> PathS ()
+findShortestForK k = _
 
 test_edges :: EdgeWeights
 test_edges = Map.fromList
