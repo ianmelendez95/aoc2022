@@ -22,18 +22,19 @@ import Debug.Trace
 
 type Edge = (Int, Int)
 
-type EdgeWeights = Map Edge Int
-
 type PathS = State PathE
 
 data PathE = PathE {
-  _pathEdges :: EdgeWeights,
+  _pathEdges :: Map Edge Int,
   _pathDists :: Map Edge Int
 }
 
 makeLenses ''PathE
 
-findShortestPaths :: EdgeWeights -> Map Edge Int
+floydWarshall :: Map Edge Int -> Map Edge Int
+floydWarshall = findShortestPaths
+
+findShortestPaths :: Map Edge Int -> Map Edge Int
 findShortestPaths weights = 
   let path_env = PathE { _pathEdges = weights, _pathDists = weights <> self_dists }
    in (execState findShortest path_env) ^. pathDists
@@ -62,7 +63,7 @@ findShortestForEdge k (i, j) = do
 getDistance :: Edge -> PathS (Maybe Int)
 getDistance edge = uses pathDists (Map.lookup edge)
 
-test_edges :: EdgeWeights
+test_edges :: Map Edge Int
 test_edges = Map.fromList
   [ ((2, 1), 4)
   , ((2, 3), 3)
