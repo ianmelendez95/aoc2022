@@ -37,6 +37,8 @@ import Text.Megaparsec hiding (State (..))
 import Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 
+import Day16.FloydWarshall (Edge, floydWarshall)
+
 import Debug.Trace
 
 data Valve = Valve {
@@ -55,7 +57,18 @@ soln :: FilePath -> IO ()
 soln file = do
   input_lines <- T.lines <$> TIO.readFile file
   let valves = map readValveLine input_lines
-  mapM_ print valves
+      all_shortest_paths = valveShortestPaths valves
+  -- mapM_ print valves
+  mapM_ print (Map.toList all_shortest_paths)
+
+valveShortestPaths :: [Valve] -> Map (T.Text, T.Text) Int
+valveShortestPaths valves = 
+  let edges_txt :: [Edge T.Text]
+      edges_txt = concatMap valveEdges valves
+   in floydWarshall (Map.fromList (zip edges_txt (repeat 1)))
+  where 
+    valveEdges :: Valve -> [(T.Text, T.Text)]
+    valveEdges valve = zip (repeat $ valveName valve) (valveAdj valve)
 
 readValveLine :: T.Text -> Valve
 readValveLine input = 
