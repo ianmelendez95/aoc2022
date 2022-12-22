@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Day16.FloydWarshall where 
 
@@ -20,38 +21,37 @@ import qualified Data.Set as Set
 
 import Debug.Trace
 
-type Edge = (Int, Int)
+type Edge a = (a, a)
 
-type PathS = State PathE
+type PathS a = State (PathE a)
 
-data PathE = PathE {
-  _pathEdges :: Map Edge Int,
-  _pathDists :: Map Edge Int
+data PathE a = PathE {
+  _pathEdges :: Map (Edge a) Int,
+  _pathDists :: Map (Edge a) Int
 }
 
 makeLenses ''PathE
 
-floydWarshall :: Map Edge Int -> Map Edge Int
+floydWarshall :: Ord a => Map (Edge a) Int -> Map (Edge a) Int
 floydWarshall = findShortestPaths
 
-findShortestPaths :: Map Edge Int -> Map Edge Int
+findShortestPaths :: forall a. Ord a => Map (Edge a) Int -> Map (Edge a) Int
 findShortestPaths weights = 
   let path_env = PathE { _pathEdges = weights, _pathDists = weights <> self_dists }
    in (execState findShortest path_env) ^. pathDists
   where 
-    findShortest :: PathS ()
+    findShortest :: PathS a ()
     findShortest = mapM_ (\k -> mapM_ (findShortestForEdge k) edge_combs) vertices
 
-    self_dists :: Map Edge Int
+    self_dists :: Map (Edge a) Int
     self_dists = Map.fromList (zip (zip vertices vertices) (repeat 0))
 
-    edge_combs :: [Edge]
+    edge_combs :: [Edge a]
     edge_combs = [(i, j) | i <- vertices, j <- vertices]
 
-    vertices :: [Int]
     vertices = nub . concatMap ((\(x, y) -> [x, y]) . fst) $ Map.toList weights
 
-findShortestForEdge :: Int -> Edge -> PathS ()
+findShortestForEdge :: Ord a => a -> Edge a -> PathS a ()
 findShortestForEdge k (i, j) = do 
   mdist_ik <- getDistance (i, k)
   mdist_kj <- getDistance (k, j)
@@ -60,10 +60,10 @@ findShortestForEdge k (i, j) = do
       pathDists %= Map.insertWith min (i, j) (dist_ik + dist_kj)
     _ -> pure ()
 
-getDistance :: Edge -> PathS (Maybe Int)
+getDistance :: Ord a => Edge a -> PathS a (Maybe Int)
 getDistance edge = uses pathDists (Map.lookup edge)
 
-test_edges :: Map Edge Int
+test_edges :: Map (Edge Int) Int
 test_edges = Map.fromList
   [ ((2, 1), 4)
   , ((2, 3), 3)
