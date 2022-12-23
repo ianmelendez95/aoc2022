@@ -71,7 +71,6 @@ soln :: FilePath -> IO ()
 soln file = do
   input_lines <- T.lines <$> TIO.readFile file
   let valves = map readValveLine input_lines
-      valve_AA = head $ filter ((== "AA") . view valveName) valves
       all_shortest_paths = valveShortestPaths valves
 
       -- flowy_valves = filter ((> 0) . valveFlow) valves
@@ -80,6 +79,8 @@ soln file = do
 
       adj_map = adjMapFromEdges all_shortest_paths
       valves' = map (updateValveAdjs adj_map) valves
+      valve_AA = head $ filter ((== "AA") . view valveName) valves'
+
       max_flow = findMaxFlow valve_AA valves' all_shortest_paths
   -- mapM_ print valves
   -- mapM_ print (Map.toList all_shortest_paths)
@@ -88,8 +89,8 @@ soln file = do
   -- putStrLn $ "Flowing Valve Count: " <> show (length flowy_valve_labels)
   -- putStrLn $ "Flowing Edges Count: " <> show (Map.size flowy_shortest_paths)
 
-  putStrLn "Flowing Edges:"
-  mapM_ print (Map.toList all_shortest_paths)
+  -- putStrLn "Flowing Edges:"
+  -- mapM_ print (Map.toList all_shortest_paths)
 
   putStrLn $ "Answer: " <> show max_flow
 
