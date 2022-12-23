@@ -54,8 +54,7 @@ type ValveS = State ValveE
 
 data ValveE = ValveE {
   _valvesByName  :: Map T.Text Valve,
-  _valveEdges    :: Map Edge Int,
-  _valvesVisited :: Set T.Text
+  _valveEdges    :: Map Edge Int
 }
 
 makeLenses ''Valve
@@ -90,7 +89,7 @@ soln file = do
 
 findMaxFlow :: Valve -> [Valve] -> Map Edge Int -> Int
 findMaxFlow valveAA valves edges = 
-  evalState (openValves 30 valveAA) (ValveE valve_map edges Set.empty)
+  evalState (openValves (Set.singleton "AA") 30 valveAA) (ValveE valve_map edges)
   where 
     valve_map :: Map T.Text Valve
     valve_map = Map.fromList $ map (\v -> (v ^. valveName, v)) valves
@@ -106,39 +105,37 @@ adjMapFromEdges edges = foldl' insertEdge Map.empty (map fst . Map.toList $ edge
     insertEdge :: AdjMap -> Edge -> AdjMap
     insertEdge adjs (k, v) = Map.insertWith (++) k [v] adjs
 
-openValves :: Int -> Valve -> ValveS Int
-openValves time_left cur_valve 
+openValves :: Set T.Text -> Int -> Valve -> ValveS Int
+openValves visited time_left cur_valve 
   | time_left <= 0 = pure 0  -- no time to even open the current valve
   | otherwise  = do
-      valvesVisited %= Set.insert (cur_valve ^. valveName)  -- add this valve to visited
-      let move_time_left = 
-            if view valveFlow cur_valve > 0 
-              then time_left - 1  -- spend time opening the valve
-              else time_left      -- no time spent
-          this_flow = (cur_valve ^. valveFlow) * (time_left - 1)
+      let this_flow = (cur_valve ^. valveFlow) * (time_left - 1)
       adj_info <- getAdjValves
-      max_flow <- maximumFlow <$> traverse (openAdj move_time_left) adj_info
+      max_flow <- maximumFlow <$> traverse openAdj adj_info
       pure $ max_flow + this_flow
   where 
     getAdjValves :: ValveS [Valve]
     getAdjValves = do
       adj_valves <- traverse getValve (cur_valve ^. valveAdj)
-      filterM canVisit adj_valves
+      pure $ filter canVisit adj_valves
     
-    canVisit :: Valve -> ValveS Bool
-    canVisit valve = do
-      if view valveFlow valve <= 0 
-        then pure False
-        else uses valvesVisited ((view valveName valve) `Set.notMember`)
+    canVisit :: Valve -> Bool
+    canVisit valve = (view valveFlow valve > 0) && ((view valveName valve) `Set.notMember` visited)
     
     maximumFlow :: [Int] -> Int
     maximumFlow [] = 0
     maximumFlow xs = maximum xs
 
-    openAdj :: Int -> Valve -> ValveS Int
-    openAdj move_time_left adj_valve = do
+    openAdj :: Valve -> ValveS Int
+    openAdj adj_valve = do
       travel_time <- getValveTime (adj_valve ^. valveName)
-      openValves (move_time_left - travel_time) adj_valve
+      openValves (Set.insert (cur_valve ^. valveName) visited) (move_time_left - travel_time) adj_valve
+    
+    move_time_left :: Int
+    move_time_left = 
+      if view valveFlow cur_valve > 0 
+        then time_left - 1  -- spend time opening the valve
+        else time_left      -- no time spent
 
     getValveTime :: T.Text -> ValveS Int
     getValveTime name = uses valveEdges (fromJust . Map.lookup (view valveName cur_valve, name))
