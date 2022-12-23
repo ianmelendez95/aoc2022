@@ -120,7 +120,9 @@ openValves visited time_left cur_valve
       pure $ filter canVisit adj_valves
     
     canVisit :: Valve -> Bool
-    canVisit valve = (view valveFlow valve > 0) && ((view valveName valve) `Set.notMember` visited)
+    canVisit valve = (view valveFlow valve > 0) 
+      && ((view valveName valve) `Set.notMember` visited)
+      && (view valveName valve /= view valveName cur_valve)
     
     maximumFlow :: [Int] -> Int
     maximumFlow [] = 0
