@@ -111,16 +111,19 @@ openValves time_left cur_valve
   | time_left <= 0 = pure 0  -- no time to even open the current valve
   | otherwise  = do
       valvesVisited %= Set.insert (cur_valve ^. valveName)  -- add this valve to visited
-      adj_info <- getAdjInfo
-      max_flow <- maximumFlow <$> traverse (uncurry openValves) adj_info
-      let this_flow = (cur_valve ^. valveFlow) * (time_left - 1)
+      let move_time_left = 
+            if view valveFlow cur_valve > 0 
+              then time_left - 1  -- spend time opening the valve
+              else time_left      -- no time spent
+          this_flow = (cur_valve ^. valveFlow) * (time_left - 1)
+      adj_info <- getAdjValves
+      max_flow <- maximumFlow <$> traverse (openAdj move_time_left) adj_info
       pure $ max_flow + this_flow
   where 
-    getAdjInfo :: ValveS [(Int, Valve)]
-    getAdjInfo = do
+    getAdjValves :: ValveS [Valve]
+    getAdjValves = do
       adj_valves <- traverse getValve (cur_valve ^. valveAdj)
-      visitable  <- filterM canVisit adj_valves
-      traverse getValveInfo visitable
+      filterM canVisit adj_valves
     
     canVisit :: Valve -> ValveS Bool
     canVisit valve = do
@@ -132,9 +135,10 @@ openValves time_left cur_valve
     maximumFlow [] = 0
     maximumFlow xs = maximum xs
 
-    -- | return (time left after opening this AND traversing to..., target valve)
-    getValveInfo :: Valve -> ValveS (Int, Valve)
-    getValveInfo valve = (,) <$> (((time_left - 1) -) <$> getValveTime (view valveName valve)) <*> pure valve
+    openAdj :: Int -> Valve -> ValveS Int
+    openAdj move_time_left adj_valve = do
+      travel_time <- getValveTime (adj_valve ^. valveName)
+      openValves (move_time_left - travel_time) adj_valve
 
     getValveTime :: T.Text -> ValveS Int
     getValveTime name = uses valveEdges (fromJust . Map.lookup (view valveName cur_valve, name))
