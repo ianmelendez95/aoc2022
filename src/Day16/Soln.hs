@@ -73,10 +73,6 @@ soln file = do
   let valves = map readValveLine input_lines
       all_shortest_paths = valveShortestPaths valves
 
-      -- flowy_valves = filter ((> 0) . valveFlow) valves
-      -- flowy_valve_labels = Set.fromList . map valveName $ flowy_valves
-      -- flowy_shortest_paths = Map.filterWithKey (filterFlowyEntry flowy_valve_labels) all_shortest_paths
-
       adj_map = adjMapFromEdges all_shortest_paths
       valves' = map (updateValveAdjs adj_map) valves
       valve_AA = head $ filter ((== "AA") . view valveName) valves'
@@ -86,8 +82,6 @@ soln file = do
   -- mapM_ print (Map.toList all_shortest_paths)
   -- putStrLn $ "Total Valve Count: "   <> show (length valves)
   -- putStrLn $ "Total Edges Count: "   <> show (Map.size all_shortest_paths)
-  -- putStrLn $ "Flowing Valve Count: " <> show (length flowy_valve_labels)
-  -- putStrLn $ "Flowing Edges Count: " <> show (Map.size flowy_shortest_paths)
 
   -- putStrLn "Flowing Edges:"
   -- mapM_ print (Map.toList all_shortest_paths)
