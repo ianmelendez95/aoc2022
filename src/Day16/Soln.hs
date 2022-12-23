@@ -69,29 +69,29 @@ soln :: FilePath -> IO ()
 soln file = do
   input_lines <- T.lines <$> TIO.readFile file
   let valves = map readValveLine input_lines
+      valve_AA = head $ filter ((== "AA") . valveName) valves
       all_shortest_paths = valveShortestPaths valves
 
-      flowy_valves = filter ((> 0) . valveFlow) valves
-      flowy_valve_labels = Set.fromList . map valveName $ flowy_valves
-      flowy_shortest_paths = Map.filterWithKey (filterFlowyEntry flowy_valve_labels) all_shortest_paths
+      -- flowy_valves = filter ((> 0) . valveFlow) valves
+      -- flowy_valve_labels = Set.fromList . map valveName $ flowy_valves
+      -- flowy_shortest_paths = Map.filterWithKey (filterFlowyEntry flowy_valve_labels) all_shortest_paths
 
-      max_flow = findMaxFlow flowy_valves flowy_shortest_paths
+      max_flow = findMaxFlow valve_AA valves all_shortest_paths
   -- mapM_ print valves
   -- mapM_ print (Map.toList all_shortest_paths)
   putStrLn $ "Total Valve Count: "   <> show (length valves)
   putStrLn $ "Total Edges Count: "   <> show (Map.size all_shortest_paths)
-  putStrLn $ "Flowing Valve Count: " <> show (length flowy_valve_labels)
-  putStrLn $ "Flowing Edges Count: " <> show (Map.size flowy_shortest_paths)
+  -- putStrLn $ "Flowing Valve Count: " <> show (length flowy_valve_labels)
+  -- putStrLn $ "Flowing Edges Count: " <> show (Map.size flowy_shortest_paths)
+
+  putStrLn "Flowing Edges:"
+  mapM_ print (Map.toList all_shortest_paths)
 
   putStrLn $ "Answer: " <> show max_flow
-  where 
-    filterFlowyEntry :: Set T.Text -> Edge -> Int -> Bool
-    filterFlowyEntry flowy_labels (p, q) _ = p `Set.member` flowy_labels && q `Set.member` flowy_labels
 
-findMaxFlow :: [Valve] -> Map Edge Int -> Int
-findMaxFlow valves edges = 
-  evalState (maximum <$> traverse (openValves 30) valves) 
-            (ValveE valve_map edges Set.empty)
+findMaxFlow :: Valve -> [Valve] -> Map Edge Int -> Int
+findMaxFlow valveAA valves edges = 
+  evalState (openValves 30 valveAA) (ValveE valve_map edges Set.empty)
   where 
     valve_map :: Map T.Text Valve
     valve_map = Map.fromList $ map (\v -> (valveName v, v)) valves
@@ -104,21 +104,27 @@ openValves time_left cur_valve
       adj_info <- getAdjInfo
       max_flow <- maximumFlow <$> traverse (uncurry openValves) adj_info
       let this_flow = (valveFlow cur_valve) * (time_left - 1)
-      -- traceM (show this_flow)
       pure $ max_flow + this_flow
   where 
     getAdjInfo :: ValveS [(Int, Valve)]
     getAdjInfo = do
-      visited <- use valvesVisited
-      traverse getValveInfo (filter (`Set.member` visited) (valveAdj cur_valve))
+      adj_valves <- traverse getValve (valveAdj cur_valve)
+      visitable  <- filterM canVisit adj_valves
+      traverse getValveInfo visitable
+    
+    canVisit :: Valve -> ValveS Bool
+    canVisit valve = do
+      if valveFlow valve <= 0 
+        then pure False
+        else uses valvesVisited ((valveName valve) `Set.notMember`)
     
     maximumFlow :: [Int] -> Int
     maximumFlow [] = 0
     maximumFlow xs = maximum xs
 
     -- | return (time left after opening this AND traversing to..., target valve)
-    getValveInfo :: T.Text -> ValveS (Int, Valve)
-    getValveInfo name = (,) <$> ((\t -> t - 1) . (time_left-) <$> getValveTime name) <*> getValve name
+    getValveInfo :: Valve -> ValveS (Int, Valve)
+    getValveInfo valve = (,) <$> (((time_left - 1) -) <$> getValveTime (valveName valve)) <*> pure valve
 
     getValveTime :: T.Text -> ValveS Int
     getValveTime name = uses valveEdges (fromJust . Map.lookup (valveName cur_valve, name))
