@@ -90,20 +90,22 @@ soln file = do
 
 findMaxFlow :: [Valve] -> Map Edge Int -> Int
 findMaxFlow valves edges = 
-  evalState (maximum <$> traverse (openValves 0) valves) 
+  evalState (maximum <$> traverse (openValves 30) valves) 
             (ValveE valve_map edges Set.empty)
   where 
     valve_map :: Map T.Text Valve
     valve_map = Map.fromList $ map (\v -> (valveName v, v)) valves
 
 openValves :: Int -> Valve -> ValveS Int
-openValves time cur_valve 
-  | time >= 30 = pure 0  -- no time to even open the current valve
+openValves time_left cur_valve 
+  | time_left <= 0 = pure 0  -- no time to even open the current valve
   | otherwise  = do
       valvesVisited %= Set.insert (valveName cur_valve)  -- add this valve to visited
       adj_info <- getAdjInfo
       max_flow <- maximumFlow <$> traverse (uncurry openValves) adj_info
-      pure $ max_flow + (valveFlow cur_valve)
+      let this_flow = (valveFlow cur_valve) * (time_left - 1)
+      -- traceM (show this_flow)
+      pure $ max_flow + this_flow
   where 
     getAdjInfo :: ValveS [(Int, Valve)]
     getAdjInfo = do
@@ -114,9 +116,9 @@ openValves time cur_valve
     maximumFlow [] = 0
     maximumFlow xs = maximum xs
 
-    -- | return (time elapsed after opening this AND traversing to..., target valve)
+    -- | return (time left after opening this AND traversing to..., target valve)
     getValveInfo :: T.Text -> ValveS (Int, Valve)
-    getValveInfo name = (,) <$> ((+1) . (+time) <$> getValveTime name) <*> getValve name
+    getValveInfo name = (,) <$> ((\t -> t - 1) . (time_left-) <$> getValveTime name) <*> getValve name
 
     getValveTime :: T.Text -> ValveS Int
     getValveTime name = uses valveEdges (fromJust . Map.lookup (valveName cur_valve, name))
